@@ -9,7 +9,7 @@
 </div>
 
 ### 📋 Introduction
-Introduction: Project Flavia, A Decentralized Model Inference Subnet
+Introduction: **Bittensor Subnet 17** Flavia, A Decentralized Model Inference Subnet.
 
 The Flavia project is a sub-network of the Bittensor network, focused on decentralized model inference at different scales.
 ## 🔧 Installation
@@ -26,6 +26,15 @@ The Flavia project is a sub-network of the Bittensor network, focused on decentr
 
 ```pip install -e .```
 
+
+## ⚖️ Support our Subnet: Assigning weights
+As a validator in the Bittensor network, your support is crucial for the success and efficiency of subnets like Flavia. We invite you to consider assigning weights to our subnet, which will significantly contribute to its performance and the overall robustness of the network.
+
+To allocate weights to the Flavia subnet, you can use the ```btcli root weights``` (**SN17**) command.
+
+By assigning weights to our subnet, you play a vital role in enhancing its inference capabilities and overall contribution to the BitTensor network. Your support helps us maintain a high-performance, reliable, and efficient subnet for decentralized model inference.
+
+We appreciate your contribution and thank you for your support in advancing decentralized AI with Flavia.
 
 
 
