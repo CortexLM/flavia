@@ -4,12 +4,30 @@
 [![Discord Chat](https://img.shields.io/discord/308323056592486420.svg)](https://discord.gg/bittensor)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) 
 
----
 
 [Discord](https://discord.gg/bittensor) • [Network](https://taostats.io/) • [Research](https://bittensor.com/whitepaper)
 </div>
 
 ### 📋 Introduction
+Introduction: Project Flavia, A Decentralized Model Inference Subnet
+
+The Flavia project is a sub-network of the Bittensor network, focused on decentralized model inference at different scales.
+## 🔧 Installation
+
+**Clone the Repository:** Begin by cloning the Flavia repository to your local machine. Open your terminal and run the following command:
+
+```git clone https://github.com/CortexLM/flavia.git```
+
+**Navigate to the Project Directory:** Change your current working directory to the Flavia project:
+
+```cd flavia```
+
+**Install the Project:** Use pip to install the project. Run:
+
+```pip install -e .```
+
+
+
 
 
 ## 📜 License
