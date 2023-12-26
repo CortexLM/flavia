@@ -1,12 +1,16 @@
 <div align="center">
 
-# **🌸 Flavia - Model Inference Subnet** <!-- omit in toc -->
+# **🌸 Flavia - Model Inference Subnet**
+Execute large-scale models on the Bittensor network
+
 [![Discord Chat](https://img.shields.io/discord/308323056592486420.svg)](https://discord.gg/bittensor)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) 
 
 
 [Discord](https://discord.gg/bittensor) • [Network](https://taostats.io/) • [Research](https://bittensor.com/whitepaper)
 </div>
+
+#
 
 ### 📋 Introduction
 Introduction: **Bittensor Subnet 17** Flavia, A Decentralized Model Inference Subnet.
