@@ -30,6 +30,20 @@ The Flavia project is a sub-network of the Bittensor network, focused on decentr
 
 ```pip install -e .```
 
+## 🔧 Daemon Installation (Inference)
+
+**Clone the Repository:** Begin by cloning the Flavia repository to your local machine. Open your terminal and run the following command:
+
+```git clone https://github.com/CortexLM/flavia.git```
+
+**Navigate to the Project Directory:** Change your current working directory to the Flavia project:
+
+```cd flavia```
+
+**Install the Project:** Use pip to install the project. Run:
+
+```pip install -e .```
+
 
 ## ⚖️ Support our Subnet: Assigning weights
 As a validator in the Bittensor network, your support is crucial for the success and efficiency of subnets like Flavia. We invite you to consider assigning weights to our subnet, which will significantly contribute to its performance and the overall robustness of the network.
