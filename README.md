@@ -11,7 +11,7 @@ Execute large-scale models on the Bittensor network
 </div>
 
 #
-
+### 🔴 This is an alpha version. Please report any bugs or suggest any improvements.
 ### 📋 Introduction
 Introduction: **Bittensor Subnet 17** Flavia, A Decentralized Model Inference Subnet.
 
