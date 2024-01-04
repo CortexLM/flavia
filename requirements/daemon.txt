@@ -1,3 +1,5 @@
+torch
+ninja
 loguru
 huggingface_hub
 lmdeploy[serve]
