@@ -161,4 +161,4 @@ cython_debug/
 
 testing/
 
-daemon/models
+daemon/models/*
