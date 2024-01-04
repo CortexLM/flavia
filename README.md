@@ -55,13 +55,22 @@ The Flavia project is a sub-network of the Bittensor network, focused on decentr
 Edit gpu_id in daemon/config.json config for dataautogpt3/OpenDalleV1.1 and CortexLM/qwen-72b-chat-w4 model.
 
 ## 📋 Requirements
-Validators :
+### **Validators :**
 
-1x80G GPU or 2x48G GPU
+1x80GB GPU or 2x48GB GPU
 
-Miners : 
+Storage: 300GB
 
-3x24G GPU or 2x80G GPU
+RAM: 32GB
+
+
+### **Miners :**
+
+3x24GB GPU or 2x80GB GPU
+
+Storage: 500GB
+
+RAM: 64GB
 
 ## ⚖️ Support our Subnet: Assigning weights
 As a validator in the Bittensor network, your support is crucial for the success and efficiency of subnets like Flavia. We invite you to consider assigning weights to our subnet, which will significantly contribute to its performance and the overall robustness of the network.
