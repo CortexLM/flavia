@@ -14,8 +14,8 @@
         "turbomind": [
             {
                 "gpu_id": "0,1",
-                "modelName":"lmdeploy/llama2-chat-7b-w4",
-                "modelType":"llama2"
+                "modelName":"CortexLM/qwen-72b-chat-w4",
+                "modelType":"qwen-14b"
             }
         ]
     }

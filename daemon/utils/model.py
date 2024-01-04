@@ -85,5 +85,5 @@ class ModelManager:
         Initialize specific models after loading them.
         """
         models = self.config.get('models', {})
-        self.models["Qwen|Qwen-72B-Chat"] = TurboMind(self, model_path="/models/lmdeploy-llama2-chat-7b-w4/workspace", gpu_id=models["turbomind"][0]["gpu_id"])
+        self.models["Qwen|Qwen-72B-Chat"] = TurboMind(self, model_path="/models/lmdeploy-llama2-chat-7b-w4/workspace", gpu_id=models["turbomind"][0]["gpu_id"], model_type=models["turbomind"][0]["modelType"])
         self.models["dataautogpt3|OpenDalleV1.1"] = SDFast(self, model_path="/models/dataautogpt3-OpenDalleV1.1/model", model_refiner="/models/stabilityai-stable-diffusion-xl-refiner-1.0/model", port=6001, model_type="t2i", gpu_id=models["diffusions"][0]["gpu_id"])

@@ -52,12 +52,13 @@ def check_tp_config(file, tp):
     
     return False
 class TurboMind:
-    def __init__(self, instance, model_path: str = None, host: str = "127.0.0.1", port: int = 9000, tp: int = 1, instance_num: int = 8, gpu_id=0, warm_up=True):
+    def __init__(self, instance, model_path: str = None, host: str = "127.0.0.1", port: int = 9000, tp: int = 1, instance_num: int = 8, gpu_id=0, warm_up=True, model_type: str = "qwen-14b"):
         self.instance = instance
         self.model_path = model_path
         self.host = host
         self.port = port
         self.tp = tp
+        self.model_type = model_type
         self.instance_num = instance_num
         self.tb_model = None
         self.gpu_id = gpu_id
@@ -134,7 +135,7 @@ class TurboMind:
             environment = os.environ.copy()
             environment["CUDA_VISIBLE_DEVICES"] = self.gpu_id
             
-            command = f"lmdeploy convert --model-name llama2 --model-path {self.base_directory}/models/lmdeploy-llama2-chat-7b-w4/model --dst_path {self.base_directory}/models/lmdeploy-llama2-chat-7b-w4/workspace --model-format awq --group-size 128 --tp {count_gpu(self.gpu_id)}"
+            command = f"lmdeploy convert --model-name {self.model_type} --model-path {self.base_directory}/models/lmdeploy-llama2-chat-7b-w4/model --dst_path {self.base_directory}/models/lmdeploy-llama2-chat-7b-w4/workspace --model-format awq --group-size 128 --tp {count_gpu(self.gpu_id)}"
             logging.info(f'Spawning build model for {self.model_path}')
 
             try:
