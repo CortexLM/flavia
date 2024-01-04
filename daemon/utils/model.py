@@ -16,6 +16,9 @@ class ModelManager:
         self.threads = []
         self.models = {}
         self.base_directory = os.getcwd()
+        self.models_directory = os.path.join(self.base_directory, 'models')
+        if not os.path.exists(self.models_directory):
+            os.makedirs(self.models_directory)
         self.config = self.load_config("config.json")
         self.load_models_from_config()
         self.initialize_models()
