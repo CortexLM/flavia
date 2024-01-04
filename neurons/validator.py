@@ -30,7 +30,6 @@ import random
 # import base validator class which takes care of most of the boilerplate
 from template.base.validator import BaseValidatorNeuron
 from template.utils.daemon import DaemonClient
-from neurons.dataset.diffusiondb import HuggingFaceDataset
 # For prompt generation
 from transformers import pipeline
 # Load prompt dataset.
@@ -46,7 +45,7 @@ class Validator(BaseValidatorNeuron):
 
     def __init__(self, config=None):
         super(Validator, self).__init__(config=config)
-        
+
         bt.logging.info("load_state()")
         self.load_state()
         self.diffusiondb = iter(load_dataset("poloclub/diffusiondb", trust_remote_code=True)['train'].shuffle(seed=random.randint(0, 1000000)).to_iterable_dataset())
