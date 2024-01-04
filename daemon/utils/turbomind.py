@@ -9,6 +9,8 @@ import os
 import subprocess
 import torch
 import gc
+import configparser
+
 import GPUtil
 import concurrent.futures
 def is_valid_json(json_str):
@@ -17,6 +19,38 @@ def is_valid_json(json_str):
         return True
     except json.JSONDecodeError:
         return False
+    
+def count_gpu(gpus_str):
+    gpu_list = gpus_str.split(',')
+    return len(gpu_list)
+
+def get_first_gpu(gpus_str):
+    gpu_list = gpus_str.split(',')
+    if len(gpu_list) > 0:
+        return int(gpu_list[0])
+    else:
+        return None
+def check_tp_config(file, tp):
+    # Vérifier si le fichier config.ini existe
+    try:
+        config = configparser.ConfigParser()
+        config.read(file)
+    except FileNotFoundError:
+        return False
+    
+    # Vérifier si la section [llama] existe
+    if 'llama' in config:
+        llama_section = config['llama']
+        
+        # Vérifier si 'tensor_para_size' existe dans la section [llama]
+        if 'tensor_para_size' in llama_section:
+            # Récupérer la valeur de 'tensor_para_size' et la convertir en int
+            tensor_para_size = int(llama_section['tensor_para_size'])
+            # Comparer avec la valeur passée en argument
+            if tensor_para_size == tp:
+                return True
+    
+    return False
 class TurboMind:
     def __init__(self, instance, model_path: str = None, host: str = "127.0.0.1", port: int = 9000, tp: int = 1, instance_num: int = 8, gpu_id=0, warm_up=True):
         self.instance = instance
@@ -29,6 +63,7 @@ class TurboMind:
         self.gpu_id = gpu_id
         self.base_directory = instance.base_directory
         # Load TurboMind Model
+        self.run_build_process()
         self.start_process()
         self.wait_for_tb_model_status()
         if warm_up:
@@ -68,7 +103,7 @@ class TurboMind:
             # Measure VRAM usage with a single request
             single_request_future = self.run_interactive_test()
             single_request_future.result()  # Wait for the single request to complete
-            single_request_memory = self.get_gpu_memory(gpu_id)
+            single_request_memory = self.get_gpu_memory(get_first_gpu(gpu_id))
             logging.info(f"Single request GPU memory usage: {single_request_memory:.2f} MB")
 
             # Measure VRAM usage with two simultaneous requests
@@ -77,7 +112,7 @@ class TurboMind:
             for future in concurrent.futures.as_completed(futures):
                 response = future.result()
             
-            total_memory = self.get_gpu_memory(gpu_id)
+            total_memory = self.get_gpu_memory(get_first_gpu(gpu_id))
             logging.info(f"Total GPU memory used with two concurrent requests: {total_memory:.2f} MB")
 
             # Calculate RAM usage per request
@@ -93,11 +128,30 @@ class TurboMind:
         self.process_thread = threading.Thread(target=self.run_subprocess)
         self.process_thread.start()
 
+    def run_build_process(self):
+        # Define the command to be executed
+        if not check_tp_config(f"{self.base_directory}/models/lmdeploy-llama2-chat-7b-w4/workspace/triton_models/weights/config.ini", count_gpu(self.gpu_id)):
+            environment = os.environ.copy()
+            environment["CUDA_VISIBLE_DEVICES"] = self.gpu_id
+            
+            command = f"lmdeploy convert --model-name llama2 --model-path {self.base_directory}/models/lmdeploy-llama2-chat-7b-w4/model --dst_path {self.base_directory}/models/lmdeploy-llama2-chat-7b-w4/workspace --model-format awq --group-size 128 --tp {count_gpu(self.gpu_id)}"
+            logging.info(f'Spawning build model for {self.model_path}')
+
+            try:
+                # Execute the command using subprocess.run
+                subprocess.run(command, shell=True, check=False, env=environment)
+                logging.success(f'Model building is complete')
+            except subprocess.CalledProcessError as e:
+                logging.error(f"Error when executing the command: {e}")
+            except Exception as e:
+                logging.error(f"An error occurred: {e}")
+            
     def run_subprocess(self):
         # Define the command to be executed
         environment = os.environ.copy()
-        environment["CUDA_VISIBLE_DEVICES"] = str(self.gpu_id)
-        command = f"lmdeploy serve api_server {self.base_directory}{self.model_path} --model-name flavia --server_name {self.host} --server_port {self.port}"
+        environment["CUDA_VISIBLE_DEVICES"] = self.gpu_id
+        
+        command = f"lmdeploy serve api_server {self.base_directory}{self.model_path} --model-name flavia --server_name {self.host} --server_port {self.port} --tp {count_gpu(self.gpu_id)}"
         logging.info(f'Spawning 1 process for {self.model_path}')
 
         try:

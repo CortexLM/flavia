@@ -2,7 +2,7 @@
     "models": {
         "diffusions": [
             {
-                "gpu_id": "4",
+                "gpu_id": "2",
                 "modelName":"dataautogpt3/OpenDalleV1.1",
                 "modelType":"Text2Image"
             },
@@ -13,7 +13,7 @@
         ],
         "turbomind": [
             {
-                "gpu_id": "0,1,2,3",
+                "gpu_id": "0,1",
                 "modelName":"lmdeploy/llama2-chat-7b-w4",
                 "modelType":"llama2"
             }
