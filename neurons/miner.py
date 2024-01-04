@@ -222,15 +222,15 @@ class StreamMiner(ABC):
         return synapse
 
     async def _models(self, synapse: Models) -> Models:  
-        print('t')
+        pass
     async def _server_info(self, synapse: ServerInfo) -> ServerInfo:
-        print('t')
+        pass
 
     async def _start_model(self, synapse: StartModel) -> StartModel:
-        print('t')
+        pass
 
     async def _stop_model(self, synapse: StopModel) -> StopModel:
-        print('t')
+        pass
 
     @abstractmethod
     def interactive(self, synapse: TextInteractive) -> TextInteractive:

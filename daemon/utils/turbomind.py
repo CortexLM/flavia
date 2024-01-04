@@ -1,4 +1,3 @@
-
 import threading
 import requests
 import time
@@ -13,44 +12,47 @@ import configparser
 
 import GPUtil
 import concurrent.futures
+
+# Function to check if a string is valid JSON
 def is_valid_json(json_str):
     try:
         json.loads(json_str)
         return True
     except json.JSONDecodeError:
         return False
-    
+
+# Function to count the number of GPUs specified in a comma-separated string
 def count_gpu(gpus_str):
     gpu_list = gpus_str.split(',')
     return len(gpu_list)
 
+# Function to get the ID of the first GPU from a comma-separated string
 def get_first_gpu(gpus_str):
     gpu_list = gpus_str.split(',')
     if len(gpu_list) > 0:
         return int(gpu_list[0])
     else:
         return None
+
+# Function to check a configuration file for a specific tensor parallel size
 def check_tp_config(file, tp):
-    # Vérifier si le fichier config.ini existe
     try:
         config = configparser.ConfigParser()
         config.read(file)
     except FileNotFoundError:
         return False
     
-    # Vérifier si la section [llama] existe
     if 'llama' in config:
         llama_section = config['llama']
         
-        # Vérifier si 'tensor_para_size' existe dans la section [llama]
         if 'tensor_para_size' in llama_section:
-            # Récupérer la valeur de 'tensor_para_size' et la convertir en int
             tensor_para_size = int(llama_section['tensor_para_size'])
-            # Comparer avec la valeur passée en argument
             if tensor_para_size == tp:
                 return True
     
     return False
+
+# Class for managing TurboMind
 class TurboMind:
     def __init__(self, instance, model_path: str = None, host: str = "127.0.0.1", port: int = 9000, tp: int = 1, instance_num: int = 8, gpu_id=0, warm_up=True, model_type: str = "qwen-14b"):
         self.instance = instance
@@ -70,6 +72,7 @@ class TurboMind:
         if warm_up:
             self.warm_up(gpu_id=self.gpu_id)
 
+    # Function to get the GPU memory usage
     def get_gpu_memory(self, gpu_id):
         try:
             gpu_info = GPUtil.getGPUs()[gpu_id]
@@ -77,21 +80,21 @@ class TurboMind:
             return total_memory
         except Exception as e:
             logging.error(f"An error occurred while getting GPU memory: {str(e)}")
-            return 0.0  # En cas d'erreur, retourne 0 pour la mémoire GPU
+            return 0.0
 
+    # Function to run an interactive test
     def run_interactive_test(self):
-        # Simule l'exécution d'une session interactive et retourne un objet Future
-        tokens = self.interactive(prompt="Once upon a time, in a picturesque little village nestled at the foot of a majestic mountain, there lived a young shepherd named Lucas. Lucas spent his days watching over his flock of sheep under the cloudless blue sky. He loved his simple, peaceful life, but always dreamed of adventure. One day, while climbing the mountain to find new pastures for his sheep, Lucas discovered a mysterious cave. He ventured inside, curious to see what was inside. Inside, he found an old treasure map with mysterious clues. Lucas was excited by this discovery and decided to follow the clues to find the hidden treasure. His journey took him through deep forests, rushing rivers and arid deserts. He met some strange and interesting characters along the way, including a wise hermit who gave him invaluable advice on solving the riddles on the map. Finally, after many adventures and challenges, Lucas reached the place indicated on the map. There, he discovered a wooden chest adorned with precious stones and filled with unimaginable riches. It was the long-sought treasure. Lucas returned to his village as a hero, sharing his wealth with friends and family. But he had learned that the real wealth was the adventure itself and the friendships he had forged along the way.")  # Obtenir les tokens ici
+        tokens = self.interactive(prompt="Once upon a time, in a picturesque little village ...")
         return concurrent.futures.ThreadPoolExecutor().submit(self.process_tokens, tokens)
     
+    # Function to process tokens from an interactive test
     def process_tokens(self, tokens):
-        # Traitez les tokens reçus de la session interactive
-        # C'est ici que vous devriez faire le traitement nécessaire avec les tokens
-        # Par exemple, concaténez-les ou faites tout autre traitement requis
         final_response = ""
         for token in tokens:
             final_response += json.loads(token)['text']
         return final_response
+
+    # Function to warm up the TurboMind model
     def warm_up(self, gpu_id):
         logging.info(f"🌺 Warming up {self.model_path}.. Please wait.")
         logging.warning(f"🌺 This may take some time. We check how many concurrent requests your GPUs can handle.")
@@ -99,8 +102,6 @@ class TurboMind:
         vram_limit = 0.95  # 95% of VRAM limit
         
         try:
-            # The warm-up is not precise, need to be redone for the next update.
-
             # Measure VRAM usage with a single request
             single_request_future = self.run_interactive_test()
             single_request_future.result()  # Wait for the single request to complete
@@ -123,14 +124,14 @@ class TurboMind:
         except Exception as e:
             logging.error(f"An error occurred during warming up: {str(e)}")
 
-
+    # Function to start the TurboMind subprocess
     def start_process(self):
         # Create a thread to run the subprocess
         self.process_thread = threading.Thread(target=self.run_subprocess)
         self.process_thread.start()
 
+    # Function to run the model build process
     def run_build_process(self):
-        # Define the command to be executed
         if not check_tp_config(f"{self.base_directory}/models/lmdeploy-llama2-chat-7b-w4/workspace/triton_models/weights/config.ini", count_gpu(self.gpu_id)):
             environment = os.environ.copy()
             environment["CUDA_VISIBLE_DEVICES"] = self.gpu_id
@@ -146,9 +147,9 @@ class TurboMind:
                 logging.error(f"Error when executing the command: {e}")
             except Exception as e:
                 logging.error(f"An error occurred: {e}")
-            
+
+    # Function to run the TurboMind subprocess
     def run_subprocess(self):
-        # Define the command to be executed
         environment = os.environ.copy()
         environment["CUDA_VISIBLE_DEVICES"] = self.gpu_id
         
@@ -163,6 +164,7 @@ class TurboMind:
         except Exception as e:
             logging.error(f"An error occurred: {e}")
 
+    # Function to wait for the TurboMind model to be ready
     def wait_for_tb_model_status(self, timeout=120):
         start_time = time.time()
         url = f"http://{self.host}:{self.port}/v1/models"
@@ -183,6 +185,7 @@ class TurboMind:
                 time.sleep(1)
                 pass
 
+    # Function for interactive completions
     def interactive(self, prompt=None, temperature=0.7, repetition_penalty=1.2, top_p=0.7, top_k=40, max_tokens=512):
         logging.debug(f"[-->] (Interactive) [{self.model_path}] Request for completion")
         payload = {
@@ -203,16 +206,17 @@ class TurboMind:
         for chunk in response_stream:
             try:
                 if is_valid_json(chunk):
-                    chunk_data = json.loads(chunk)  # Analyser le chunk JSON
+                    chunk_data = json.loads(chunk)
                     if 'text' in chunk_data:
                         yield json.dumps({"text": chunk_data['text']})+"\n"
                         tokens = chunk_data['tokens'];         
             except Exception as e:
-                print('Chunk :', str(e))
+                logging.error('Chunk :', str(e))
 
         streaming_duration = round(time.time() - stream_start_time, 2)
         logging.debug(f"[<--] (Interactive) [{self.model_path}] Completion done in {streaming_duration}s ({tokens} tokens)")
 
+    # Function for message completions
     def completion(self, messages=None, temperature=0.7, repetition_penalty=1.2, top_p=0.7, max_tokens=512):
         logging.debug(f"[-->] [{self.model_path}] Request for completion")
         payload = {
@@ -241,8 +245,7 @@ class TurboMind:
                             
          
             except Exception as e:
-                print(chunk)
-                print('Chunk :', str(e))
+                logging.error('Chunk :', str(e))
 
         streaming_duration = round(time.time() - stream_start_time, 2)
-        logging.debug(f"[<--] (Completion) [{self.model_path}] Completion done in {streaming_duration}s")    
+        logging.debug(f"[<--] (Completion) [{self.model_path}] Completion done in {streaming_duration}s")

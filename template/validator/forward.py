@@ -103,7 +103,6 @@ def generate_random_step_with_bias():
 async def check_similarity_completion(self, uid, model, messages, completion, temperature, repetition_penalty, top_p, max_tokens):
     bt.logging.debug(f'Scoring {uid} text..')
     true_completion = ""
-    print(repetition_penalty)
     for chunk in self.daemon.send_text_generation_completions(model = model, messages = messages, temperature = temperature, repetition_penalty = repetition_penalty, top_p = top_p,max_tokens = max_tokens):
         token = chunk['text']
         true_completion+= token
