@@ -1,7 +1,7 @@
 # The MIT License (MIT)
 # Copyright © 2023 Yuma Rao
-# TODO(developer): Set your name
-# Copyright © 2023 <your name>
+
+# Copyright © 2023 Cortex Foundation
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
 # documentation files (the “Software”), to deal in the Software without restriction, including without limitation
@@ -16,61 +16,215 @@
 # THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
+from PIL import Image
 
 import typing
+from typing import List
+from pydantic import BaseModel
 import bittensor as bt
+from starlette.responses import StreamingResponse
+# Your existing Dummy class here...
 
-# TODO(developer): Rewrite with your protocol definition.
+# New classes inheriting from bt.Synapse
+class TextInteractive(bt.StreamingSynapse):
+    model: str
+    prompt: str
+    temperature: typing.Optional[float] = 0.8
+    repetition_penalty: typing.Optional[float] = 1.1
+    top_p: typing.Optional[float] = 0.9
+    top_k: typing.Optional[float] = 40
+    max_tokens: typing.Optional[int] = 512
+    completion: typing.Optional[str] = None
 
-# This is the protocol for the dummy miner and validator.
-# It is a simple request-response protocol where the validator sends a request
-# to the miner, and the miner responds with a dummy response.
-
-# ---- miner ----
-# Example usage:
-#   def dummy( synapse: Dummy ) -> Dummy:
-#       synapse.dummy_output = synapse.dummy_input + 1
-#       return synapse
-#   axon = bt.axon().attach( dummy ).serve(netuid=...).start()
-
-# ---- validator ---
-# Example usage:
-#   dendrite = bt.dendrite()
-#   dummy_output = dendrite.query( Dummy( dummy_input = 1 ) )
-#   assert dummy_output == 2
-
-
-class Dummy(bt.Synapse):
-    """
-    A simple dummy protocol representation which uses bt.Synapse as its base.
-    This protocol helps in handling dummy request and response communication between
-    the miner and the validator.
-
-    Attributes:
-    - dummy_input: An integer value representing the input request sent by the validator.
-    - dummy_output: An optional integer value which, when filled, represents the response from the miner.
-    """
-
-    # Required request input, filled by sending dendrite caller.
-    dummy_input: int
-
-    # Optional request output, filled by recieving axon.
-    dummy_output: typing.Optional[int] = None
-
-    def deserialize(self) -> int:
+    async def process_streaming_response(self, response: StreamingResponse):
         """
-        Deserialize the dummy output. This method retrieves the response from
-        the miner in the form of dummy_output, deserializes it and returns it
-        as the output of the dendrite.query() call.
+        `process_streaming_response` is an asynchronous method designed to process the incoming streaming response from the
+        Bittensor network. It's the heart of the StreamPrompting class, ensuring that streaming tokens, which represent
+        prompts or messages, are decoded and appropriately managed.
+
+        As the streaming response is consumed, the tokens are decoded from their 'utf-8' encoded format, split based on
+        newline characters, and concatenated into the `completion` attribute. This accumulation of decoded tokens in the
+        `completion` attribute allows for a continuous and coherent accumulation of the streaming content.
+
+        Args:
+            response: The streaming response object containing the content chunks to be processed. Each chunk in this
+                      response is expected to be a set of tokens that can be decoded and split into individual messages or prompts.
+        """
+        if self.completion is None:
+            self.completion = ""
+        bt.logging.debug("Processing streaming response (TextCompletion)")
+        async for chunk in response.content.iter_any():
+            tokens = chunk.decode("utf-8").split("\n")
+            for token in tokens:
+                if token:
+                    self.completion += token
+            yield tokens
+
+    def deserialize(self) -> str:
+        """
+        Deserializes the response by returning the completion attribute.
 
         Returns:
-        - int: The deserialized response, which in this case is the value of dummy_output.
-
-        Example:
-        Assuming a Dummy instance has a dummy_output value of 5:
-        >>> dummy_instance = Dummy(dummy_input=4)
-        >>> dummy_instance.dummy_output = 5
-        >>> dummy_instance.deserialize()
-        5
+            str: The completion result.
         """
-        return self.dummy_output
+        return self.completion
+    
+    def extract_response_json(self, response: StreamingResponse) -> dict:
+        headers = {
+            k.decode("utf-8"): v.decode("utf-8")
+            for k, v in response.__dict__["_raw_headers"]
+        }
+
+        def extract_info(prefix):
+            return {
+                key.split("_")[-1]: value
+                for key, value in headers.items()
+                if key.startswith(prefix)
+            }
+
+        return {
+            "name": headers.get("name", ""),
+            "timeout": float(headers.get("timeout", 0)),
+            "total_size": int(headers.get("total_size", 0)),
+            "header_size": int(headers.get("header_size", 0)),
+            "dendrite": extract_info("bt_header_dendrite"),
+            "axon": extract_info("bt_header_axon"),
+            "prompt": self.prompt,
+            "model": self.model,
+            "completion": self.completion,
+        }
+    
+
+class TextCompletion(bt.StreamingSynapse):
+    model: str
+    messages: typing.List
+    temperature: typing.Optional[float] = 0.8
+    repetition_penalty: typing.Optional[float] = 1.1
+    top_p: typing.Optional[float] = 0.9
+    max_tokens: typing.Optional[int] = 512
+    completion: typing.Optional[str] = None
+
+    async def process_streaming_response(self, response: StreamingResponse):
+        """
+        `process_streaming_response` is an asynchronous method designed to process the incoming streaming response from the
+        Bittensor network. It's the heart of the StreamPrompting class, ensuring that streaming tokens, which represent
+        prompts or messages, are decoded and appropriately managed.
+
+        As the streaming response is consumed, the tokens are decoded from their 'utf-8' encoded format, split based on
+        newline characters, and concatenated into the `completion` attribute. This accumulation of decoded tokens in the
+        `completion` attribute allows for a continuous and coherent accumulation of the streaming content.
+
+        Args:
+            response: The streaming response object containing the content chunks to be processed. Each chunk in this
+                      response is expected to be a set of tokens that can be decoded and split into individual messages or prompts.
+        """
+        if self.completion is None:
+            self.completion = ""
+        bt.logging.debug("Processing streaming response (TextCompletion)")
+        async for chunk in response.content.iter_any():
+            tokens = chunk.decode("utf-8").split("\n")
+            for token in tokens:
+                if token:
+                    self.completion += token
+            yield tokens
+
+    def deserialize(self) -> str:
+        """
+        Deserializes the response by returning the completion attribute.
+
+        Returns:
+            str: The completion result.
+        """
+        return self.completion
+    
+    def extract_response_json(self, response: StreamingResponse) -> dict:
+        headers = {
+            k.decode("utf-8"): v.decode("utf-8")
+            for k, v in response.__dict__["_raw_headers"]
+        }
+
+        def extract_info(prefix):
+            return {
+                key.split("_")[-1]: value
+                for key, value in headers.items()
+                if key.startswith(prefix)
+            }
+
+        return {
+            "name": headers.get("name", ""),
+            "timeout": float(headers.get("timeout", 0)),
+            "total_size": int(headers.get("total_size", 0)),
+            "header_size": int(headers.get("header_size", 0)),
+            "dendrite": extract_info("bt_header_dendrite"),
+            "axon": extract_info("bt_header_axon"),
+            "model": self.model,
+            "messages": self.messages,
+            "completion": self.completion,
+        }
+    
+
+class TextToImage(bt.Synapse):
+    model: str
+    prompt: str
+    height: typing.Optional[int] = 1024
+    width: typing.Optional[int] = 1024
+    num_inference_steps: typing.Optional[int] = 30
+    seed: typing.Optional[int] = -1 
+    batch_size: typing.Optional[int] = 1
+    refiner: typing.Optional[bool] = False
+    output: list[ bt.Tensor ] = [] #base64
+
+    def deserialize(self):
+        # Implementation of the deserialize method
+        pass  # Customize based on your requirements
+
+class ImageToImage(bt.Synapse):
+    model: str
+    image: bt.Tensor =  None
+    prompt: str
+    height: typing.Optional[int] = 1024
+    width: typing.Optional[int] = 1024
+    strength: typing.Optional[int] = 1
+    seed: typing.Optional[int] = -1 
+    batch_size: typing.Optional[int] = 1
+    output: list[ bt.Tensor ] = [] #base64
+
+    def deserialize(self):
+        # Implementation of the deserialize method
+        pass  # Customize based on your requirements
+
+class isOnline(bt.Synapse):
+    active: str = False
+
+    def deserialize(self):
+        # Implementation of the deserialize method
+        pass  # Customize based on your requirements
+# Additional implementation details here...
+class Models(bt.Synapse):
+    active: str = False
+
+    def deserialize(self):
+        # Implementation of the deserialize method
+        pass  # Customize based on your requirements
+# Additional implementation details here...    
+class ServerInfo(bt.Synapse):
+    active: str = False
+
+    def deserialize(self):
+        # Implementation of the deserialize method
+        pass  # Customize based on your requirements
+
+class StartModel(bt.Synapse):
+    active: str = False
+
+    def deserialize(self):
+        # Implementation of the deserialize method
+        pass  # Customize based on your requirements
+
+class StopModel(bt.Synapse):
+    active: str = False
+
+    def deserialize(self):
+        # Implementation of the deserialize method
+        pass  # Customize based on your requirements
+# Additional implementation details here...

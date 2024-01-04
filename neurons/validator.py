@@ -1,7 +1,7 @@
 # The MIT License (MIT)
 # Copyright © 2023 Yuma Rao
-# TODO(developer): Set your name
-# Copyright © 2023 <your name>
+
+# Copyright © 2023 Cortex Foundation
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
 # documentation files (the “Software”), to deal in the Software without restriction, including without limitation
@@ -26,11 +26,15 @@ import bittensor as bt
 # Bittensor Validator Template:
 import template
 from template.validator import forward
-
+import random
 # import base validator class which takes care of most of the boilerplate
 from template.base.validator import BaseValidatorNeuron
-
-
+from template.utils.daemon import DaemonClient
+from neurons.dataset.diffusiondb import HuggingFaceDataset
+# For prompt generation
+from transformers import pipeline
+# Load prompt dataset.
+from datasets import load_dataset
 class Validator(BaseValidatorNeuron):
     """
     Your validator neuron class. You should use this class to define your validator's behavior. In particular, you should replace the forward function with your own logic.
@@ -42,9 +46,13 @@ class Validator(BaseValidatorNeuron):
 
     def __init__(self, config=None):
         super(Validator, self).__init__(config=config)
-
+        
         bt.logging.info("load_state()")
         self.load_state()
+        self.diffusiondb = iter(load_dataset("poloclub/diffusiondb", trust_remote_code=True)['train'].shuffle(seed=random.randint(0, 1000000)).to_iterable_dataset())
+        self.instructions_dataset = iter(load_dataset("nlpie/Llama2-MedTuned-Instructions", trust_remote_code=True)['train'].shuffle(seed=random.randint(0, 1000000)).to_iterable_dataset())
+        self.magic_prompt = pipeline("text-generation", model="Gustavosta/MagicPrompt-Dalle")
+        self.daemon = DaemonClient(base_url="http://127.0.0.1:8000")
 
         # TODO(developer): Anything specific to your use case you can do here
 

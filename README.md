@@ -28,6 +28,7 @@ The Flavia project is a sub-network of the Bittensor network, focused on decentr
 
 **Install the Project:** Use pip to install the project. Run:
 
+```pip install -r requirements/miner.txt```
 ```pip install -e .```
 
 ## 🔧 Daemon Installation (Inference)
@@ -42,7 +43,7 @@ The Flavia project is a sub-network of the Bittensor network, focused on decentr
 
 **Install the Project:** Use pip to install the project. Run:
 
-```pip install -e .```
+```pip install -r requirements/daemon.txt```
 
 
 ## ⚖️ Support our Subnet: Assigning weights

@@ -1,7 +1,7 @@
 # The MIT License (MIT)
 # Copyright © 2023 Yuma Rao
-# TODO(developer): Set your name
-# Copyright © 2023 <your name>
+
+# Copyright © 2023 Cortex Foundation
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
 # documentation files (the “Software”), to deal in the Software without restriction, including without limitation
@@ -26,7 +26,7 @@ import bittensor as bt
 
 from typing import List
 from traceback import print_exception
-
+from template import __spec_version__ as spec_version
 from template.base.neuron import BaseNeuron
 
 
@@ -34,13 +34,13 @@ class BaseValidatorNeuron(BaseNeuron):
     """
     Base class for Bittensor validators. Your validator should inherit from this class.
     """
+    spec_version: int = spec_version
 
     def __init__(self, config=None):
         super().__init__(config=config)
 
         # Save a copy of the hotkeys to local memory.
         self.hotkeys = copy.deepcopy(self.metagraph.hotkeys)
-
         # Dendrite lets us send messages to other nodes (axons) in the network.
         self.dendrite = bt.dendrite(wallet=self.wallet)
         bt.logging.info(f"Dendrite: {self.dendrite}")
@@ -48,12 +48,15 @@ class BaseValidatorNeuron(BaseNeuron):
         # Set up initial scoring weights for validation
         bt.logging.info("Building validation weights.")
         self.scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
+        self.moving_averaged_scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
+
 
         # Init sync with the network. Updates the metagraph.
         self.sync()
 
         # Serve axon to enable external connections.
-        if not self.config.neuron.axon_off:
+        # if not self.config.neuron.axon_off
+        if False:
             self.serve_axon()
         else:
             bt.logging.warning("axon off, not serving ip to chain.")
@@ -120,7 +123,7 @@ class BaseValidatorNeuron(BaseNeuron):
         self.sync()
 
         bt.logging.info(
-            f"Running validator {self.axon} on network: {self.config.subtensor.chain_endpoint} with netuid: {self.config.netuid}"
+            f"Running validator on network: {self.config.subtensor.chain_endpoint} with netuid: {self.config.netuid}"
         )
 
         bt.logging.info(f"Validator starting at block: {self.block}")
@@ -308,6 +311,8 @@ class BaseValidatorNeuron(BaseNeuron):
 
         # Compute forward pass rewards, assumes uids are mutually exclusive.
         # shape: [ metagraph.n ]
+        bt.logging.debug(self.scores)
+        bt.logging.debug(rewards)
         scattered_rewards: torch.FloatTensor = self.scores.scatter(
             0, torch.tensor(uids).to(self.device), rewards
         ).to(self.device)
