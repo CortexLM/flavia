@@ -66,7 +66,7 @@ RAM: 32GB
 
 ### **Miners :**
 
-3x24GB GPU or 2x80GB GPU
+5x24GB GPU or 2x80GB GPU
 
 Storage: 500GB
 
