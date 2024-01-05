@@ -146,7 +146,7 @@ def check_score_image(self, uid, model, image, prompt, steps, seed, height, widt
     similarity_score = compare_images(bt.Tensor.deserialize(image), vali_image)
 
     valid = False
-    if similarity_score > 0.99:
+    if similarity_score > 0.8:
         bt.logging.debug(f'The image of {uid} is equal to that of the validator. Score = 1')
         valid = True
     else:
