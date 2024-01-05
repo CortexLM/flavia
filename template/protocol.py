@@ -48,17 +48,26 @@ class TextInteractive(bt.StreamingSynapse):
 
         Args:
             response: The streaming response object containing the content chunks to be processed. Each chunk in this
-                      response is expected to be a set of tokens that can be decoded and split into individual messages or prompts.
+                    response is expected to be a set of tokens that can be decoded and split into individual messages or prompts.
         """
         if self.completion is None:
             self.completion = ""
-        bt.logging.debug("Processing streaming response (TextCompletion)")
-        async for chunk in response.content.iter_any():
-            tokens = chunk.decode("utf-8").split("\n")
-            for token in tokens:
-                if token:
-                    self.completion += token
-            yield tokens
+        bt.logging.debug("Processing streaming response (TextInteractive)")
+
+        try:
+            async for chunk in response.content.iter_any():
+                tokens = chunk.decode("utf-8").split("\n")
+                for token in tokens:
+                    if token:
+                        self.completion += token
+                yield tokens
+        except Exception as e:
+            bt.logging.error(f"Error processing streaming response: {e}")
+            # Handle the exception as needed, e.g., re-raise, return an error message, etc.
+            # For example:
+            # raise e
+            # or
+            # return {"error": str(e)}
 
     def deserialize(self) -> str:
         """
@@ -116,17 +125,26 @@ class TextCompletion(bt.StreamingSynapse):
 
         Args:
             response: The streaming response object containing the content chunks to be processed. Each chunk in this
-                      response is expected to be a set of tokens that can be decoded and split into individual messages or prompts.
+                    response is expected to be a set of tokens that can be decoded and split into individual messages or prompts.
         """
         if self.completion is None:
             self.completion = ""
         bt.logging.debug("Processing streaming response (TextCompletion)")
-        async for chunk in response.content.iter_any():
-            tokens = chunk.decode("utf-8").split("\n")
-            for token in tokens:
-                if token:
-                    self.completion += token
-            yield tokens
+
+        try:
+            async for chunk in response.content.iter_any():
+                tokens = chunk.decode("utf-8").split("\n")
+                for token in tokens:
+                    if token:
+                        self.completion += token
+                yield tokens
+        except Exception as e:
+            bt.logging.error(f"Error processing streaming response: {e}")
+            # Handle the exception as needed, e.g., re-raise, return an error message, etc.
+            # For example:
+            # raise e
+            # or
+            # return {"error": str(e)}
 
     def deserialize(self) -> str:
         """
