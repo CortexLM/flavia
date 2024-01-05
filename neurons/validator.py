@@ -19,7 +19,7 @@
 
 
 import time
-
+import copy
 # Bittensor
 import bittensor as bt
 
@@ -45,6 +45,11 @@ class Validator(BaseValidatorNeuron):
 
     def __init__(self, config=None):
         super(Validator, self).__init__(config=config)
+
+        # Config 
+        base_config = copy.deepcopy(config or get_config())
+        self.config = self.config()
+        self.config.merge(base_config)
 
         bt.logging.info("load_state()")
         self.load_state()
