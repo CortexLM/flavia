@@ -3,3 +3,4 @@ bittensor
 torch
 torchvision
 transformers
+datasets
