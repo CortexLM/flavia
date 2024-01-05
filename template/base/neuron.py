@@ -112,16 +112,16 @@ class BaseNeuron(ABC):
         Wrapper for synchronizing the state of the network for the given miner or validator.
         """
         # Ensure miner or validator hotkey is still registered on the network.
-        await self.check_registered()
+        self.check_registered()
 
         if self.should_sync_metagraph():
-            await self.resync_metagraph()
+            self.resync_metagraph()
 
         if self.should_set_weights():
-            await self.set_weights()
+            self.set_weights()
 
         # Always save state.
-        await self.save_state()
+        self.save_state()
 
     def check_registered(self):
         # --- Check for registration.
