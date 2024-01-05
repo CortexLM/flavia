@@ -314,6 +314,3 @@ async def forward(self):
     self.update_scores(rewards_tensor , miner_uids)
 
     bt.logging.info("rewards", rewards_tensor)
-    for i in range(10):
-        bt.logging.info("sleeping for", i)
-        time.sleep(1)
