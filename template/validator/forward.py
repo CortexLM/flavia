@@ -28,8 +28,33 @@ import torch
 import numpy as np
 import time
 import random
+import torchvision.transforms.functional as F
+from skimage.metrics import structural_similarity as ssim
+import numpy as np
 import io
 import base64
+def tensor_to_numpy(tensor):
+    # Convert PyTorch tensor to a NumPy array
+    return tensor.mul(255).byte().numpy().transpose(1, 2, 0)
+
+def compare_images(tensor_image1, tensor_image2):
+    # Convert tensors to numpy arrays
+    np_image1 = tensor_to_numpy(tensor_image1)
+    np_image2 = tensor_to_numpy(tensor_image2)
+
+    # Convert images to grayscale
+    img1_gray = F.to_grayscale(F.to_pil_image(np_image1), num_output_channels=1)
+    img2_gray = F.to_grayscale(F.to_pil_image(np_image2), num_output_channels=1)
+
+    # Convert PIL images back to numpy arrays
+    np_img1_gray = np.array(img1_gray)
+    np_img2_gray = np.array(img2_gray)
+
+    # Calculate the structural similarity
+    similarity = ssim(np_img1_gray, np_img2_gray)
+
+    # Check if similarity is greater than 99%
+    return similarity
 def generate_unique_prompt(self):
     # from ImageSubnet
     initial_prompt = next(self.diffusiondb)['prompt']
@@ -117,9 +142,11 @@ def check_score_image(self, uid, model, image, prompt, steps, seed, height, widt
     bt.logging.debug(f'Scoring {uid} image..')
     r_output = self.daemon.send_text_to_image_request(model=model, prompt=prompt, height=height, width=width, num_inference_steps=steps, seed=seed, batch_size=1, refiner=refiner)
     
-    vali_image = bt.Tensor.serialize( transform_b64_bt(r_output['images'][0]) )
+    vali_image = transform_b64_bt(r_output['images'][0])
+    similarity_score = compare_images(bt.Tensor.deserialize(image), vali_image)
+
     valid = False
-    if vali_image == image:
+    if similarity_score > 0.99:
         bt.logging.debug(f'The image of {uid} is equal to that of the validator. Score = 1')
         valid = True
     else:
@@ -176,6 +203,7 @@ async def forward(self):
         try:
             # Generate a unique prompt for each miner
             model = image_model
+            
             prompt = generate_unique_prompt(self)
             (height, width) = generate_random_size_dimension()
             random_steps = generate_random_step_with_bias()
