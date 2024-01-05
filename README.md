@@ -28,49 +28,15 @@ The Flavia project is a sub-network of the Bittensor network, focused on decentr
 
 **Install the Project:** Use pip to install the project. Run:
 
-```pip install -r requirements/miner.txt```
-
 ```pip install -e .```
 
 ## 🔧 Daemon Installation (Inference)
 
-**Clone the Repository:** Begin by cloning the Flavia repository to your local machine. Open your terminal and run the following command:
-
-```git clone https://github.com/CortexLM/flavia.git```
-
-**Navigate to the Project Directory:** Change your current working directory to the Flavia project:
-
-```cd flavia```
-
-**Install the Project:** Use pip to install the project. Run:
-
-```pip install -r requirements/daemon.txt```
-
-**Run:**:
-
-```pm2 start daemon/run.py --name flavia-daemon```
-
-**Edit configuration daemon:**
-
-Edit gpu_id in daemon/config.json config for dataautogpt3/OpenDalleV1.1 and CortexLM/qwen-72b-chat-w4 model.
+**Please check https://github.com/CortexLM/sense**
 
 ## 📋 Requirements
-### **Validators :**
 
-1x80GB GPU or 2x48GB GPU
-
-Storage: 300GB
-
-RAM: 32GB
-
-
-### **Miners :**
-
-5x24GB GPU or 2x80GB GPU
-
-Storage: 500GB
-
-RAM: 64GB
+TODO
 
 ## ⚖️ Support our Subnet: Assigning weights
 As a validator in the Bittensor network, your support is crucial for the success and efficiency of subnets like Flavia. We invite you to consider assigning weights to our subnet, which will significantly contribute to its performance and the overall robustness of the network.
