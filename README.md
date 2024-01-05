@@ -30,10 +30,6 @@ The Flavia project is a sub-network of the Bittensor network, focused on decentr
 
 ```pip install -e .```
 
-## 🔧 Daemon Installation (Inference)
-
-**Please check https://github.com/CortexLM/sense**
-
 **Run a miner:**
 
 ```pm2 start neurons/miner.py --netuid 17 --wallet.name <coldkey> --wallet.hotkey <hotkey> --sense.base_url http://host:port --sense.api_key (your api key) --logging.debug```
@@ -41,6 +37,10 @@ The Flavia project is a sub-network of the Bittensor network, focused on decentr
 **Run a validator:**
 
 ```pm2 start neurons/validator.py --netuid 17 --wallet.name <coldkey> --wallet.hotkey <hotkey> --sense.base_url http://host:port --sense.api_key (your api key) --logging.debug```
+
+## 🔧 Daemon Installation (Inference)
+
+**Please check https://github.com/CortexLM/sense**
 
 ## 📋 Requirements
 
