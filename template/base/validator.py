@@ -216,8 +216,7 @@ class BaseValidatorNeuron(BaseNeuron):
             bt.logging.warning(
                 f"Scores contain NaN values. This may be due to a lack of responses from miners, or a bug in your reward functions."
             )
-        if self.moving_averaged_scores is None:
-            self.moving_averaged_scores = self.scores
+        self.moving_averaged_scores = self.scores
         # Calculate the average reward for each uid across non-zero values.
         # Replace any NaN values with 0.
         raw_weights = torch.nn.functional.normalize(
