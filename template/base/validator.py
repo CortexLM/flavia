@@ -48,7 +48,7 @@ class BaseValidatorNeuron(BaseNeuron):
         # Set up initial scoring weights for validation
         bt.logging.info("Building validation weights.")
         self.scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
-        self.moving_averaged_scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
+        self.moving_averaged_scores = None;
 
 
         # Init sync with the network. Updates the metagraph.
@@ -216,7 +216,8 @@ class BaseValidatorNeuron(BaseNeuron):
             bt.logging.warning(
                 f"Scores contain NaN values. This may be due to a lack of responses from miners, or a bug in your reward functions."
             )
-
+        if self.moving_averaged_scores is None:
+            self.moving_averaged_scores = self.scores
         # Calculate the average reward for each uid across non-zero values.
         # Replace any NaN values with 0.
         raw_weights = torch.nn.functional.normalize(
