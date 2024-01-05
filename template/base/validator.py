@@ -337,7 +337,7 @@ class BaseValidatorNeuron(BaseNeuron):
                 "scores": self.scores,
                 "hotkeys": self.hotkeys,
             },
-            self.config.miner.full_path + "/state.pt",
+            self.config.neuron.full_path + "/state.pt",
         )
 
     def load_state(self):
@@ -345,7 +345,7 @@ class BaseValidatorNeuron(BaseNeuron):
         bt.logging.info("Loading validator state.")
 
         # Load the state of the validator from file.
-        state = torch.load(self.config.miner.full_path + "/state.pt")
+        state = torch.load(self.config.neuron.full_path + "/state.pt")
         self.step = state["step"]
         self.scores = state["scores"]
         self.hotkeys = state["hotkeys"]
