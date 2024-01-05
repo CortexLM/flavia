@@ -1,0 +1,5 @@
+pillow
+bittensor
+torch
+torchvision
+transformers
