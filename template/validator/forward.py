@@ -170,7 +170,7 @@ def frange(start, stop, step):
 def generate_random_top_p():
     # Define the range and step for repetition penalty
     min_top_p = 0.1
-    max_top_p = 1
+    max_top_p = 0.9
     step = 0.1
 
     # Generating a list of valid penalties within the range with the specified step
