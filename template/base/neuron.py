@@ -107,21 +107,21 @@ class BaseNeuron(ABC):
     def run(self):
         ...
 
-    def sync(self):
+    async def sync(self):
         """
         Wrapper for synchronizing the state of the network for the given miner or validator.
         """
         # Ensure miner or validator hotkey is still registered on the network.
-        self.check_registered()
+        await self.check_registered()
 
         if self.should_sync_metagraph():
-            self.resync_metagraph()
+            await self.resync_metagraph()
 
         if self.should_set_weights():
-            self.set_weights()
+            await self.set_weights()
 
         # Always save state.
-        self.save_state()
+        await self.save_state()
 
     def check_registered(self):
         # --- Check for registration.
