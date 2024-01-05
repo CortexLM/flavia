@@ -146,7 +146,7 @@ def check_score_image(self, uid, model, image, prompt, steps, seed, height, widt
     similarity_score = compare_images(bt.Tensor.deserialize(image), vali_image)
 
     valid = False
-    if similarity_score > 0.8:
+    if similarity_score > 0.7:
         bt.logging.debug(f'The image of {uid} is equal to that of the validator. Score = 1')
         valid = True
     else:
@@ -215,7 +215,7 @@ async def forward(self):
                 synapse=TextToImage(model=model, prompt=prompt, seed=seed, num_inference_steps=random_steps, height=height, width=width, refiner=refiner),
                 deserialize=False,
                 streaming=False,
-                timeout=8
+                timeout=12
             )
             return uid, response, prompt, random_steps, seed, height, width, refiner
         except Exception as e:
