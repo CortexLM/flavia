@@ -44,8 +44,9 @@ class StreamMiner(ABC):
         bt.logging.info("starting stream miner")
         base_config = copy.deepcopy(config or get_config())
         self.config = self.config()
-        self.daemon = DaemonClient(base_url="http://127.0.0.1:8000")
         self.config.merge(base_config)
+        self.daemon = DaemonClient(base_url=self.config.sense.base_url, api_key=self.config.sense.api_key)
+        bt.logging.debug(self.config)
         self.wallet = wallet or bt.wallet(config=self.config)
         bt.logging.info(f"Wallet {self.wallet}")
 
@@ -73,7 +74,7 @@ class StreamMiner(ABC):
             bt.logging.info(f"Running miner on uid: {self.my_subnet_uid}")
 
         # The axon handles request processing, allowing validators to send this process requests.
-        self.axon = axon or bt.axon(wallet=self.wallet, port=self.config.axon.port)
+        self.axon = axon or bt.axon(wallet=self.wallet, port=self.config.axon.port, external_ip=self.config.axon.external_ip, external_port=self.config.axon.external_port)
         # Attach determiners which functions are called when servicing a request.
         bt.logging.info(f"Attaching forward function to axon.")
         self.axon.attach(

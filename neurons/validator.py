@@ -51,7 +51,7 @@ class Validator(BaseValidatorNeuron):
         self.diffusiondb = iter(load_dataset("poloclub/diffusiondb", trust_remote_code=True)['train'].shuffle(seed=random.randint(0, 1000000)).to_iterable_dataset())
         self.instructions_dataset = iter(load_dataset("nlpie/Llama2-MedTuned-Instructions", trust_remote_code=True)['train'].shuffle(seed=random.randint(0, 1000000)).to_iterable_dataset())
         self.magic_prompt = pipeline("text-generation", model="Gustavosta/MagicPrompt-Dalle")
-        self.daemon = DaemonClient(base_url="http://127.0.0.1:8000")
+        self.daemon = DaemonClient(base_url=self.config.sense.base_url, api_key=self.config.sense.api_key)
 
         # TODO(developer): Anything specific to your use case you can do here
 
