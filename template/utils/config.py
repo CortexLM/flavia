@@ -101,7 +101,19 @@ def add_args(cls, parser):
         help="If set, we dont save events to a log file.",
         default=False,
     )
-
+    # Sense
+    parser.add_argument(
+        "--sense.base_url",
+        type=str,
+        help="Base URL for Sense Daemon",
+        default="http://127.0.0.1:8000",
+    )
+    parser.add_argument(
+        "--sense.api_key",
+        type=str,
+        help="API key for Sense Daemon.",
+        default=None,
+    )
     if neuron_type == "validator":
         parser.add_argument(
             "--neuron.num_concurrent_forwards",

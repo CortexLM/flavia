@@ -1,7 +1,7 @@
 # The MIT License (MIT)
 # Copyright © 2023 Yuma Rao
-# TODO(developer): Set your name
-# Copyright © 2023 <your name>
+
+# Copyright © 2023 Cortex Foundation
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
 # documentation files (the “Software”), to deal in the Software without restriction, including without limitation
@@ -26,11 +26,14 @@ import bittensor as bt
 # Bittensor Validator Template:
 import template
 from template.validator import forward
-
+import random
 # import base validator class which takes care of most of the boilerplate
 from template.base.validator import BaseValidatorNeuron
-
-
+from template.utils.daemon import DaemonClient
+# For prompt generation
+from transformers import pipeline
+# Load prompt dataset.
+from datasets import load_dataset
 class Validator(BaseValidatorNeuron):
     """
     Your validator neuron class. You should use this class to define your validator's behavior. In particular, you should replace the forward function with your own logic.
@@ -45,6 +48,10 @@ class Validator(BaseValidatorNeuron):
 
         bt.logging.info("load_state()")
         self.load_state()
+        self.diffusiondb = iter(load_dataset("poloclub/diffusiondb", trust_remote_code=True)['train'].shuffle(seed=random.randint(0, 1000000)).to_iterable_dataset())
+        self.instructions_dataset = iter(load_dataset("nlpie/Llama2-MedTuned-Instructions", trust_remote_code=True)['train'].shuffle(seed=random.randint(0, 1000000)).to_iterable_dataset())
+        self.magic_prompt = pipeline("text-generation", model="Gustavosta/MagicPrompt-Dalle")
+        self.daemon = DaemonClient(base_url=self.config.sense.base_url, api_key=self.config.sense.api_key)
 
         # TODO(developer): Anything specific to your use case you can do here
 
@@ -65,5 +72,4 @@ class Validator(BaseValidatorNeuron):
 if __name__ == "__main__":
     with Validator() as validator:
         while True:
-            bt.logging.info("Validator running...", time.time())
-            time.sleep(5)
+            time.sleep(60*60*60*365*100)

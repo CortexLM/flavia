@@ -1,148 +1,400 @@
-# The MIT License (MIT)
-# Copyright © 2023 Yuma Rao
-# TODO(developer): Set your name
-# Copyright © 2023 <your name>
-
-# Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
-# documentation files (the “Software”), to deal in the Software without restriction, including without limitation
-# the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software,
-# and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-# The above copyright notice and this permission notice shall be included in all copies or substantial portions of
-# the Software.
-
-# THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO
-# THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-# DEALINGS IN THE SOFTWARE.
-
 import time
-import typing
+import copy
+import asyncio
+import argparse
+import threading
+import traceback
+import io
 import bittensor as bt
+from config import get_config, check_config
+from functools import partial
+import base64
+from PIL import Image
+import torch
+from torchvision import transforms
+from starlette.types import Send
+from abc import ABC, abstractmethod
+from typing import List, Dict, Tuple, Union, Callable, Awaitable
+from template.utils.daemon import DaemonClient
+import numpy as np
+from template.protocol import TextInteractive, TextCompletion, TextToImage, ImageToImage, isOnline, Models, StartModel, ServerInfo, StopModel
+bt.debug()
+from io import BytesIO
+transform_b64_bt = transforms.Compose([
+    transforms.Lambda(lambda x: base64.b64decode(x)),
+    transforms.Lambda(lambda x: Image.open(io.BytesIO(x))), 
+    transforms.ToTensor() 
+])
+def tensor_to_pil(tensor_image):
+    # Normalize tensor to 0-1 if it's not already
+    if torch.max(tensor_image) > 1:
+        tensor_image = tensor_image / 255
 
-# Bittensor Miner Template:
-import template
+    # Convert to PIL image
+    return Image.fromarray(tensor_image.mul(255).byte().numpy().transpose(1, 2, 0))
 
-# import base miner class which takes care of most of the boilerplate
-from template.base.miner import BaseMinerNeuron
+# Convert PIL image to base64
+def pil_to_base64(pil_image):
+    img_byte_arr = BytesIO()
+    pil_image.save(img_byte_arr, format='PNG')
+    img_byte_arr = img_byte_arr.getvalue()
+    return base64.b64encode(img_byte_arr).decode()
+class StreamMiner(ABC):
+    def __init__(self, config=None, axon=None, wallet=None, subtensor=None):
+        bt.logging.info("starting stream miner")
+        base_config = copy.deepcopy(config or get_config())
+        self.config = self.config()
+        self.config.merge(base_config)
+        self.daemon = DaemonClient(base_url=self.config.sense.base_url, api_key=self.config.sense.api_key)
+        bt.logging.debug(self.config)
+        self.wallet = wallet or bt.wallet(config=self.config)
+        bt.logging.info(f"Wallet {self.wallet}")
 
+        # subtensor manages the blockchain, facilitating interaction with the Bittensor blockchain.
+        self.subtensor = subtensor or bt.subtensor(config=self.config)
+        bt.logging.info(f"Subtensor: {self.subtensor}")
+        bt.logging.info(
+            f"Running miner for subnet: {self.config.netuid} on network: {self.subtensor.chain_endpoint} with config:"
+        )
 
-class Miner(BaseMinerNeuron):
-    """
-    Your miner neuron class. You should use this class to define your miner's behavior. In particular, you should replace the forward function with your own logic. You may also want to override the blacklist and priority functions according to your needs.
+        # metagraph provides the network's current state, holding state about other participants in a subnet.
+        self.metagraph = self.subtensor.metagraph(self.config.netuid)
+        bt.logging.info(f"Metagraph: {self.metagraph}")
 
-    This class inherits from the BaseMinerNeuron class, which in turn inherits from BaseNeuron. The BaseNeuron class takes care of routine tasks such as setting up wallet, subtensor, metagraph, logging directory, parsing config, etc. You can override any of the methods in BaseNeuron if you need to customize the behavior.
+        if self.wallet.hotkey.ss58_address not in self.metagraph.hotkeys:
+            bt.logging.error(
+                f"\nYour validator: {self.wallet} if not registered to chain connection: {self.subtensor} \nRun btcli register and try again. "
+            )
+            exit()
+        else:
+            # Each miner gets a unique identity (UID) in the network for differentiation.
+            self.my_subnet_uid = self.metagraph.hotkeys.index(
+                self.wallet.hotkey.ss58_address
+            )
+            bt.logging.info(f"Running miner on uid: {self.my_subnet_uid}")
 
-    This class provides reasonable default behavior for a miner such as blacklisting unrecognized hotkeys, prioritizing requests based on stake, and forwarding requests to the forward function. If you need to define custom
-    """
+        # The axon handles request processing, allowing validators to send this process requests.
+        self.axon = axon or bt.axon(wallet=self.wallet, port=self.config.axon.port, external_ip=self.config.axon.external_ip, external_port=self.config.axon.external_port)
+        # Attach determiners which functions are called when servicing a request.
+        bt.logging.info(f"Attaching forward function to axon.")
+        self.axon.attach(
+            forward_fn=self._interactive,
+        ).attach(
+            forward_fn=self._completion,
+        ).attach(
+            forward_fn=self._text2image,
+        ).attach(
+            forward_fn=self._image2image,
+        ).attach(
+            forward_fn=self._is_online,
+        ).attach(
+            forward_fn=self._models,
+        ).attach(
+            forward_fn=self._server_info,
+        ).attach(
+            forward_fn=self._start_model,
+        ).attach(
+            forward_fn=self._stop_model,
+        )
+        bt.logging.info(f"Axon created: {self.axon}")
 
-    def __init__(self, config=None):
-        super(Miner, self).__init__(config=config)
+        # Instantiate runners
+        self.should_exit: bool = False
+        self.is_running: bool = False
+        self.thread: threading.Thread = None
+        self.lock = asyncio.Lock()
+        self.request_timestamps: Dict = {}
 
-        # TODO(developer): Anything specific to your use case you can do here
+    def config(self) -> "bt.Config":
+        parser = argparse.ArgumentParser(description="Streaming Miner Configs")
+        self.add_args(parser)
+        return bt.config(parser)
 
-    async def forward(
-        self, synapse: template.protocol.Dummy
-    ) -> template.protocol.Dummy:
-        """
-        Processes the incoming 'Dummy' synapse by performing a predefined operation on the input data.
-        This method should be replaced with actual logic relevant to the miner's purpose.
+    @classmethod
+    @abstractmethod
+    def add_args(cls, parser: argparse.ArgumentParser):
+        ...
+    async def _is_online(self, synapse: isOnline) -> isOnline:
+        return True;
 
-        Args:
-            synapse (template.protocol.Dummy): The synapse object containing the 'dummy_input' data.
+    async def _interactive(self, synapse: TextInteractive) -> TextInteractive:
+        bt.logging.info(f"started processing for synapse {synapse}")
+        
+        
+        async def _prompt(synapse, send: Send):
+            try:
+                model = synapse.model
+                prompt = synapse.prompt
+                bt.logging.info(synapse)
+                bt.logging.info(f"question is {prompt} with model {model}")
+                buffer = []
+                N=1
+                for chunk in self.daemon.send_text_generation_interactive(model_name = synapse.model, prompt = synapse.prompt, temperature = synapse.temperature, repetition_penalty = synapse.repetition_penalty, top_p = synapse.top_p, top_k = synapse.top_k, max_tokens = synapse.max_tokens):
+                    token = chunk['text']
+                    buffer.append(token)
+                    if len(buffer) == N:
+                        joined_buffer = "".join(buffer)
+                        await send(
+                            {
+                                "type": "http.response.body",
+                                "body": joined_buffer.encode("utf-8"),
+                                "more_body": True,
+                            }
+                        )
+                        bt.logging.info(f"Streamed tokens: {joined_buffer}")
+                        buffer = []
 
-        Returns:
-            template.protocol.Dummy: The synapse object with the 'dummy_output' field set to twice the 'dummy_input' value.
+                if buffer:
+                    joined_buffer = "".join(buffer)
+                    await send(
+                        {
+                            "type": "http.response.body",
+                            "body": joined_buffer.encode("utf-8"),
+                            "more_body": False,
+                        }
+                    )
+                    bt.logging.info(f"Streamed tokens: {joined_buffer}")
+            except Exception as e:
+                 bt.logging.error(f"error in _prompt {e}\n{traceback.format_exc()}")
 
-        The 'forward' function is a placeholder and should be overridden with logic that is appropriate for
-        the miner's intended operation. This method demonstrates a basic transformation of input data.
-        """
-        # TODO(developer): Replace with actual implementation logic.
-        synapse.dummy_output = synapse.dummy_input * 2
+        token_streamer = partial(_prompt, synapse)
+        return synapse.create_streaming_response(token_streamer)
+
+    async def _completion(self, synapse: TextCompletion) -> TextCompletion:
+        bt.logging.info(f"started processing for synapse {synapse}")
+        
+        
+        async def _prompt(synapse, send: Send):
+            try:
+                model = synapse.model
+                messages = synapse.messages
+                bt.logging.info(synapse)
+                bt.logging.info(f"question is {messages} with model {model}")
+                buffer = []
+                N=1
+                for chunk in self.daemon.send_text_generation_completions(model = synapse.model, messages = synapse.messages, temperature = synapse.temperature, repetition_penalty = synapse.repetition_penalty, top_p = synapse.top_p,max_tokens = synapse.max_tokens):
+                    token = chunk['text']
+                    token = token.replace('\n', '<newline>')
+                    buffer.append(token)
+                    if len(buffer) == N:
+                        joined_buffer = "".join(buffer)
+                        await send(
+                            {
+                                "type": "http.response.body",
+                                "body": joined_buffer.encode("utf-8"),
+                                "more_body": True,
+                            }
+                        )
+                        bt.logging.info(f"Streamed tokens: {joined_buffer}")
+                        buffer = []
+
+                if buffer:
+                    joined_buffer = "".join(buffer)
+                    await send(
+                        {
+                            "type": "http.response.body",
+                            "body": joined_buffer.encode("utf-8"),
+                            "more_body": False,
+                        }
+                    )
+                    bt.logging.info(f"Streamed tokens: {joined_buffer}")
+            except Exception as e:
+                 bt.logging.error(f"error in _prompt {e}\n{traceback.format_exc()}")
+
+        token_streamer = partial(_prompt, synapse)
+        return synapse.create_streaming_response(token_streamer)
+
+    async def _text2image(self, synapse: TextToImage) -> TextToImage:
+        bt.logging.debug(synapse)
+        r_output = self.daemon.send_text_to_image_request(model=synapse.model, prompt=synapse.prompt, height=synapse.height, width=synapse.width, num_inference_steps=synapse.num_inference_steps, seed=synapse.seed, batch_size=synapse.batch_size, refiner=synapse.refiner)
+        tensor_images = [bt.Tensor.serialize( transform_b64_bt(base64_image) ) for base64_image in r_output['images']]
+
+        synapse.output = tensor_images
+        return synapse
+    async def _image2image(self, synapse: ImageToImage) -> ImageToImage:
+        tensor = bt.Tensor.deserialize(synapse.image);
+        pil_image = tensor_to_pil(tensor)
+        base64_image = pil_to_base64(pil_image)
+        r_output = self.daemon.send_image_to_image_request(model=synapse.model, image=base64_image, prompt=synapse.prompt, height=synapse.height, width=synapse.width, strength=synapse.strength, seed=synapse.seed, batch_size=synapse.batch_size)
+        
+        tensor_images = [bt.Tensor.serialize( transform_b64_bt(base64_image) ) for base64_image in r_output['images']]
+
+        synapse.output = tensor_images
         return synapse
 
-    async def blacklist(
-        self, synapse: template.protocol.Dummy
-    ) -> typing.Tuple[bool, str]:
-        """
-        Determines whether an incoming request should be blacklisted and thus ignored. Your implementation should
-        define the logic for blacklisting requests based on your needs and desired security parameters.
+    async def _models(self, synapse: Models) -> Models:  
+        pass
+    async def _server_info(self, synapse: ServerInfo) -> ServerInfo:
+        pass
 
-        Blacklist runs before the synapse data has been deserialized (i.e. before synapse.data is available).
-        The synapse is instead contructed via the headers of the request. It is important to blacklist
-        requests before they are deserialized to avoid wasting resources on requests that will be ignored.
+    async def _start_model(self, synapse: StartModel) -> StartModel:
+        pass
 
-        Args:
-            synapse (template.protocol.Dummy): A synapse object constructed from the headers of the incoming request.
+    async def _stop_model(self, synapse: StopModel) -> StopModel:
+        pass
 
-        Returns:
-            Tuple[bool, str]: A tuple containing a boolean indicating whether the synapse's hotkey is blacklisted,
-                            and a string providing the reason for the decision.
+    @abstractmethod
+    def interactive(self, synapse: TextInteractive) -> TextInteractive:
+        pass
 
-        This function is a security measure to prevent resource wastage on undesired requests. It should be enhanced
-        to include checks against the metagraph for entity registration, validator status, and sufficient stake
-        before deserialization of synapse data to minimize processing overhead.
+    @abstractmethod
+    def completion(self, synapse: TextCompletion) -> TextCompletion:
+        pass    
 
-        Example blacklist logic:
-        - Reject if the hotkey is not a registered entity within the metagraph.
-        - Consider blacklisting entities that are not validators or have insufficient stake.
+    @abstractmethod
+    def text2image(self, synapse: TextToImage) -> TextToImage:
+        pass  
 
-        In practice it would be wise to blacklist requests from entities that are not validators, or do not have
-        enough stake. This can be checked via metagraph.S and metagraph.validator_permit. You can always attain
-        the uid of the sender via a metagraph.hotkeys.index( synapse.dendrite.hotkey ) call.
+    @abstractmethod
+    def image2image(self, synapse: ImageToImage) -> ImageToImage:
+        pass  
 
-        Otherwise, allow the request to be processed further.
-        """
-        # TODO(developer): Define how miners should blacklist requests.
-        if synapse.dendrite.hotkey not in self.metagraph.hotkeys:
-            # Ignore requests from unrecognized entities.
-            bt.logging.trace(
-                f"Blacklisting unrecognized hotkey {synapse.dendrite.hotkey}"
+    @abstractmethod
+    def is_online(self, synapse: isOnline) -> isOnline:
+        pass  
+
+    @abstractmethod
+    def models(self, synapse: Models) -> Models:
+        pass  
+
+    @abstractmethod
+    def server_info(self, synapse: ServerInfo) -> ServerInfo:
+        pass  
+
+    @abstractmethod
+    def start_model(self, synapse: StartModel) -> StartModel:
+        pass
+
+    @abstractmethod
+    def stop_model(self, synapse: StopModel) -> StopModel:
+        pass
+
+    def run(self):
+        if not self.subtensor.is_hotkey_registered(
+            netuid=self.config.netuid,
+            hotkey_ss58=self.wallet.hotkey.ss58_address,
+        ):
+            bt.logging.error(
+                f"Wallet: {self.wallet} is not registered on netuid {self.config.netuid}"
+                f"Please register the hotkey using `btcli s register --netuid 17` before trying again"
             )
-            return True, "Unrecognized hotkey"
-
-        bt.logging.trace(
-            f"Not Blacklisting recognized hotkey {synapse.dendrite.hotkey}"
+            exit()
+        bt.logging.info(
+            f"Serving axon {TextInteractive} on network: {self.config.subtensor.chain_endpoint} with netuid: {self.config.netuid}"
         )
-        return False, "Hotkey recognized!"
+        self.axon.serve(netuid=self.config.netuid, subtensor=self.subtensor)
+        bt.logging.info(f"Starting axon server on port: {self.config.axon.port}")
+        self.axon.start()
+        self.last_epoch_block = self.subtensor.get_current_block()
+        bt.logging.info(f"Miner starting at block: {self.last_epoch_block}")
+        bt.logging.info(f"Starting main loop")
+        step = 0
+        try:
+            while not self.should_exit:
+                start_epoch = time.time()
 
-    async def priority(self, synapse: template.protocol.Dummy) -> float:
-        """
-        The priority function determines the order in which requests are handled. More valuable or higher-priority
-        requests are processed before others. You should design your own priority mechanism with care.
+                # --- Wait until the next epoch.
+                current_block = self.subtensor.get_current_block()
+                while (
+                    current_block - self.last_epoch_block
+                    < self.config.miner.blocks_per_epoch
+                ):
+                    # --- Wait for the next block.
+                    time.sleep(1)
+                    current_block = self.subtensor.get_current_block()
+                    # --- Check if we should exit.
+                    if self.should_exit:
+                        break
 
-        This implementation assigns priority to incoming requests based on the calling entity's stake in the metagraph.
+                # --- Update the metagraph with the latest network state.
+                self.last_epoch_block = self.subtensor.get_current_block()
 
-        Args:
-            synapse (template.protocol.Dummy): The synapse object that contains metadata about the incoming request.
+                metagraph = self.subtensor.metagraph(
+                    netuid=self.config.netuid,
+                    lite=True,
+                    block=self.last_epoch_block,
+                )
+                log = (
+                    f"Step:{step} | "
+                    f"Block:{metagraph.block.item()} | "
+                    f"Stake:{metagraph.S[self.my_subnet_uid]} | "
+                    f"Rank:{metagraph.R[self.my_subnet_uid]} | "
+                    f"Trust:{metagraph.T[self.my_subnet_uid]} | "
+                    f"Consensus:{metagraph.C[self.my_subnet_uid] } | "
+                    f"Incentive:{metagraph.I[self.my_subnet_uid]} | "
+                    f"Emission:{metagraph.E[self.my_subnet_uid]}"
+                )
+                bt.logging.info(log)
 
-        Returns:
-            float: A priority score derived from the stake of the calling entity.
+                # --- Set weights.
+                if not self.config.miner.no_set_weights:
+                    pass
+                step += 1
 
-        Miners may recieve messages from multiple entities at once. This function determines which request should be
-        processed first. Higher values indicate that the request should be processed first. Lower values indicate
-        that the request should be processed later.
+        except KeyboardInterrupt:
+            self.axon.stop()
+            bt.logging.success("Miner killed by keyboard interrupt.")
+            exit()
 
-        Example priority logic:
-        - A higher stake results in a higher priority value.
-        """
-        # TODO(developer): Define how miners should prioritize requests.
-        caller_uid = self.metagraph.hotkeys.index(
-            synapse.dendrite.hotkey
-        )  # Get the caller index.
-        prirority = float(
-            self.metagraph.S[caller_uid]
-        )  # Return the stake as the priority.
-        bt.logging.trace(
-            f"Prioritizing {synapse.dendrite.hotkey} with value: ", prirority
-        )
-        return prirority
+        except Exception as e:
+            bt.logging.error(traceback.format_exc())
+
+    def run_in_background_thread(self):
+        if not self.is_running:
+            bt.logging.debug("Starting miner in background thread.")
+            self.should_exit = False
+            self.thread = threading.Thread(target=self.run, daemon=True)
+            self.thread.start()
+            self.is_running = True
+            bt.logging.debug("Started")
+
+    def stop_run_thread(self):
+        if self.is_running:
+            bt.logging.debug("Stopping miner in the background thread.")
+            self.should_exit = True
+            self.thread.join(5)
+            self.is_running = False
+            bt.logging.debug("Stopped")
+
+    def __enter__(self):
+        self.run_in_background_thread()
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.stop_run_thread()
 
 
-# This is the main function, which runs the miner.
+class StreamingTemplateMiner(StreamMiner):
+    def add_args(cls, parser: argparse.ArgumentParser):
+        pass
+
+    def interactive(self, synapse: TextInteractive) -> TextInteractive:
+        ...
+
+    def completion(self, synapse: TextCompletion)  -> TextCompletion:
+        ...
+
+    def text2image(self, synapse: TextToImage)  -> TextToImage:
+        ...
+
+    def image2image(self, synapse: ImageToImage)  -> ImageToImage:
+        ...
+
+    def is_online(self, synapse: ImageToImage)  -> ImageToImage:
+        ...
+
+    def models(self, synapse: ImageToImage)  -> ImageToImage:
+        ...
+
+    def server_info(self, synapse: ImageToImage)  -> ImageToImage:
+        ...
+
+    def start_model(self, synapse: StartModel)  -> StartModel:
+        ...
+
+    def stop_model(self, synapse: StopModel)  -> StopModel:
+        ...
+
 if __name__ == "__main__":
-    with Miner() as miner:
+    with StreamingTemplateMiner():
         while True:
-            bt.logging.info("Miner running...", time.time())
-            time.sleep(5)
+            time.sleep(1)

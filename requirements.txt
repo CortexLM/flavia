@@ -1,2 +1,7 @@
+pillow
 bittensor
 torch
+torchvision
+transformers
+datasets
+scikit-image
