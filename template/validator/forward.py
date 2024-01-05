@@ -248,17 +248,16 @@ async def forward(self):
 
             completion = ""
             try:
-            for resp in response:
-                i = 0
-                async for chunk in resp:       
-                    if isinstance(chunk, list):
-                        completion += chunk[0].replace('<newline>', '\n')
-                    else:
-                        # last object yielded is the synapse itself with completion filled
-                        synapse = chunk
-                break
+                for resp in response:
+                    i = 0
+                    async for chunk in resp:       
+                        if isinstance(chunk, list):
+                            completion += chunk[0].replace('<newline>', '\n')
+                        else:
+                            # last object yielded is the synapse itself with completion filled
+                            synapse = chunk
+                    break
             except asyncio.CancelledError:
-                # En cas d'annulation, fixer les valeurs spécifiques et sortir
                 duration = 15
                 completion = ""
                 return uid, model, messages, completion, max_tokens, repetition_penalty, top_p, duration
