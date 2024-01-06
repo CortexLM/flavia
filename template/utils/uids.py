@@ -28,14 +28,14 @@ def check_uid_availability(
 
 def get_random_uids(self, k: int, exclude: List[int] = None) -> torch.LongTensor:
     """
-    Returns k available random uids from the metagraph, preferring those not already queried.
+    Returns k or fewer available random uids from the metagraph, preferring those not already queried.
+    If there are not enough unqueried uids, the function will return fewer uids.
     Args:
         k (int): Number of uids to return.
         exclude (List[int]): List of uids to exclude from the random sampling.
     Returns:
         uids (torch.LongTensor): Randomly sampled available uids.
     Notes:
-        If `k` is larger than the number of available `uids`, set `k` to the number of available `uids`.
         Resets miners_already_queried if all have been queried.
     """
     candidate_uids = []
@@ -48,24 +48,15 @@ def get_random_uids(self, k: int, exclude: List[int] = None) -> torch.LongTensor
         uid_is_not_excluded = exclude is None or uid not in exclude
         uid_not_queried = uid not in self.miners_already_queried
 
-        if uid_is_available and uid_not_queried:
-            candidate_uids.append(uid)
         if uid_is_available:
             avail_uids.append(uid)
+            if uid_is_not_excluded and uid_not_queried:
+                candidate_uids.append(uid)
 
-    if len(candidate_uids) < k:
-        # If not enough unqueried uids, use some already queried ones
-        additional_uids = random.sample(
-            [uid for uid in avail_uids if uid not in candidate_uids],
-            min(k - len(candidate_uids), len(avail_uids) - len(candidate_uids))
-        )
-        candidate_uids.extend(additional_uids)
-
-    if len(candidate_uids) < k:
-        # Not enough uids, reset the queried list and re-run the function
+    # If not enough uids, reset the queried list and re-run the function
+    if len(avail_uids) == len(self.miners_already_queried):
         self.miners_already_queried.clear()
-        return self.get_random_uids(k, exclude)
 
-    uids = torch.tensor(random.sample(candidate_uids, k))
+    uids = torch.tensor(random.sample(candidate_uids, min(k, len(candidate_uids))))
     self.miners_already_queried.update(uids.tolist())
     return uids
