@@ -52,19 +52,10 @@ class Validator(BaseValidatorNeuron):
         self.instructions_dataset = iter(load_dataset("nlpie/Llama2-MedTuned-Instructions", trust_remote_code=True)['train'].shuffle(seed=random.randint(0, 1000000)).to_iterable_dataset())
         self.magic_prompt = pipeline("text-generation", model="Gustavosta/MagicPrompt-Dalle")
         self.daemon = DaemonClient(base_url=self.config.sense.base_url, api_key=self.config.sense.api_key)
+        self.miners_already_queried = set()
 
-        # TODO(developer): Anything specific to your use case you can do here
 
     async def forward(self):
-        """
-        Validator forward pass. Consists of:
-        - Generating the query
-        - Querying the miners
-        - Getting the responses
-        - Rewarding the miners
-        - Updating the scores
-        """
-        # TODO(developer): Rewrite this function based on your protocol definition.
         return await forward(self)
 
 

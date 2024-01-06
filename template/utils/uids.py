@@ -26,17 +26,17 @@ def check_uid_availability(
     return True
 
 
-def get_random_uids(
-    self, k: int, exclude: List[int] = None
-) -> torch.LongTensor:
-    """Returns k available random uids from the metagraph.
+def get_random_uids(self, k: int, exclude: List[int] = None) -> torch.LongTensor:
+    """
+    Returns k or fewer available random uids from the metagraph, preferring those not already queried.
+    If there are not enough unqueried uids, the function will return fewer uids.
     Args:
         k (int): Number of uids to return.
         exclude (List[int]): List of uids to exclude from the random sampling.
     Returns:
         uids (torch.LongTensor): Randomly sampled available uids.
     Notes:
-        If `k` is larger than the number of available `uids`, set `k` to the number of available `uids`.
+        Resets miners_already_queried if all have been queried.
     """
     candidate_uids = []
     avail_uids = []
@@ -46,18 +46,17 @@ def get_random_uids(
             self.metagraph, uid, self.config.neuron.vpermit_tao_limit
         )
         uid_is_not_excluded = exclude is None or uid not in exclude
+        uid_not_queried = uid not in self.miners_already_queried
 
         if uid_is_available:
             avail_uids.append(uid)
-            if uid_is_not_excluded:
+            if uid_is_not_excluded and uid_not_queried:
                 candidate_uids.append(uid)
 
-    # Check if candidate_uids contain enough for querying, if not grab all avaliable uids
-    available_uids = candidate_uids
-    if len(candidate_uids) < k:
-        available_uids += random.sample(
-            [uid for uid in avail_uids if uid not in candidate_uids],
-            k - len(candidate_uids),
-        )
-    uids = torch.tensor(random.sample(available_uids, k))
+    # If not enough uids, reset the queried list and re-run the function
+    if len(avail_uids) == len(self.miners_already_queried):
+        self.miners_already_queried.clear()
+
+    uids = torch.tensor(random.sample(candidate_uids, min(k, len(candidate_uids))))
+    self.miners_already_queried.update(uids.tolist())
     return uids
