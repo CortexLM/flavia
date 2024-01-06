@@ -220,7 +220,7 @@ async def forward(self):
             return uid, response, prompt, random_steps, seed, height, width, refiner
         except Exception as e:
             bt.logging.error(f"Error querying miner {uid}: {e}")
-            return uid, None
+            return uid, None, None, None, None, None, None, None, None,
         
     async def query_miner_completions(uid):
 
@@ -265,7 +265,7 @@ async def forward(self):
 
         except Exception as e:
             bt.logging.error(f"Error querying miner {uid}: {e}")
-            return uid, None
+            return uid, None, None, None, None, None, None, None, None,
 
     # Select miner UIDs to query
     miner_uids = get_random_uids(self, k=15)
@@ -277,6 +277,8 @@ async def forward(self):
     # Process and score responses
     rewards = {}
     for uid, response, prompt, random_steps, seed, height, width, refiner in responses:
+        if None in [uid, response, prompt, random_steps, seed, height, width, refiner]:
+            return rewards[uid] = 0
         response = response[0]
         if len(response.output) > 0:
             if check_score_image(self, uid=uid, model=image_model, image=response.output[0], prompt=prompt, steps=random_steps, seed=seed, height=height, width=width, refiner=refiner):
