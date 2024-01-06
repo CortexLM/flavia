@@ -278,7 +278,8 @@ async def forward(self):
     rewards = {}
     for uid, response, prompt, random_steps, seed, height, width, refiner in responses:
         if None in [uid, response, prompt, random_steps, seed, height, width, refiner]:
-            return rewards[uid] = 0
+            rewards[uid] = 0
+            continue;
         response = response[0]
         if len(response.output) > 0:
             if check_score_image(self, uid=uid, model=image_model, image=response.output[0], prompt=prompt, steps=random_steps, seed=seed, height=height, width=width, refiner=refiner):
