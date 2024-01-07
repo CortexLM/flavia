@@ -38,6 +38,18 @@ The Flavia project is a sub-network of the Bittensor network, focused on decentr
 
 ```pm2 start "python3 neurons/validator.py --netuid 17 --wallet.name <coldkey> --wallet.hotkey <hotkey> --sense.base_url http://host:port --sense.api_key (your api key) --logging.debug"```
 
+**Install Node.js and PM2:**
+
+```curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash```
+
+```export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"```
+
+```[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"```
+
+```nvm install --lts```
+
+```npm i pm2 -g```
+
 ## 🔧 Daemon Installation (Inference)
 
 **Please check https://github.com/CortexLM/sense**
