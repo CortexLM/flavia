@@ -23,7 +23,7 @@ import torch
 import asyncio
 import threading
 import bittensor as bt
-
+import time
 from typing import List
 from traceback import print_exception
 from template import __spec_version__ as spec_version
@@ -133,30 +133,30 @@ class BaseValidatorNeuron(BaseNeuron):
             while True:
                 bt.logging.info(f"step({self.step}) block({self.block})")
 
-                # Run multiple forwards concurrently.
-                self.loop.run_until_complete(self.concurrent_forward())
+                try:
+                    # Run multiple forwards concurrently.
+                    self.loop.run_until_complete(self.concurrent_forward())
 
-                # Check if we should exit.
-                if self.should_exit:
-                    break
+                    # Check if we should exit.
+                    if self.should_exit:
+                        break
 
-                # Sync metagraph and potentially set weights.
-                self.sync()
+                    # Sync metagraph and potentially set weights.
+                    self.sync()
 
-                self.step += 1
+                    self.step += 1
 
-        # If someone intentionally stops the validator, it'll safely terminate operations.
+                except Exception as err:
+                    bt.logging.error("Error during validation, wait 15s", str(err))
+                    bt.logging.debug(print_exception(type(err), err, err.__traceback__))
+                    time.sleep(15)
+                    # Continue to the next iteration of the loop
+                    continue
+
         except KeyboardInterrupt:
             self.axon.stop()
             bt.logging.success("Validator killed by keyboard interrupt.")
             exit()
-
-        # In case of unforeseen errors, the validator will log the error and continue operations.
-        except Exception as err:
-            bt.logging.error("Error during validation", str(err))
-            bt.logging.debug(
-                print_exception(type(err), err, err.__traceback__)
-            )
 
     def run_in_background_thread(self):
         """
