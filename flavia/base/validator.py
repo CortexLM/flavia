@@ -26,8 +26,8 @@ import bittensor as bt
 import time
 from typing import List
 from traceback import print_exception
-from template import __spec_version__ as spec_version
-from template.base.neuron import BaseNeuron
+from flavia import __spec_version__ as spec_version
+from flavia.base.neuron import BaseNeuron
 
 
 class BaseValidatorNeuron(BaseNeuron):
@@ -48,6 +48,8 @@ class BaseValidatorNeuron(BaseNeuron):
         # Set up initial scoring weights for validation
         bt.logging.info("Building validation weights.")
         self.scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
+        self.cp_scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
+        self.df_scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
         self.moving_averaged_scores = None;
 
 
@@ -324,6 +326,72 @@ class BaseValidatorNeuron(BaseNeuron):
         ) * self.scores.to(self.device)
         bt.logging.debug(f"Updated moving avg scores: {self.scores}")
 
+    def update_cp_scores(self, rewards: torch.FloatTensor, uids: List[int]):
+        """Performs exponential moving average on the scores based on the rewards received from the miners."""
+
+        # Check if rewards contains NaN values.
+        if torch.isnan(rewards).any():
+            bt.logging.warning(f"NaN values detected in rewards: {rewards}")
+            # Replace any NaN values in rewards with 0.
+            rewards = torch.nan_to_num(rewards, 0)
+
+        # Compute forward pass rewards, assumes uids are mutually exclusive.
+        # shape: [metagraph.n]
+        bt.logging.debug(self.cp_scores)
+        bt.logging.debug(rewards)
+        scattered_rewards: torch.FloatTensor = self.cp_scores.scatter(
+            0, torch.tensor(uids).to(self.device), rewards
+        ).to(self.device)
+        bt.logging.debug(f"Scattered rewards: {rewards}")
+
+        # Update scores with rewards produced by this step.
+        # shape: [metagraph.n]
+        alpha: float = self.config.neuron.moving_average_alpha
+
+        # Compute exponential moving average.
+        self.cp_scores: torch.FloatTensor = alpha * scattered_rewards + (1 - alpha) * self.cp_scores.to(self.device)
+
+        bt.logging.debug(f"Updated scores: {self.cp_scores}")
+
+        # Vous pouvez calculer la moyenne et assigner la moyenne calculée aux scores
+        average_tokens_score = torch.mean(self.cp_scores)
+        self.cp_scores = self.cp_scores * (average_tokens_score / torch.mean(self.cp_scores))
+
+        bt.logging.debug(f"Updated average tokens score: {self.cp_scores}")
+
+    def update_df_scores(self, rewards: torch.FloatTensor, uids: List[int]):
+        """Performs exponential moving average on the scores based on the rewards received from the miners."""
+
+        # Check if rewards contains NaN values.
+        if torch.isnan(rewards).any():
+            bt.logging.warning(f"NaN values detected in rewards: {rewards}")
+            # Replace any NaN values in rewards with 0.
+            rewards = torch.nan_to_num(rewards, 0)
+
+        # Compute forward pass rewards, assumes uids are mutually exclusive.
+        # shape: [metagraph.n]
+        bt.logging.debug(self.df_scores)
+        bt.logging.debug(rewards)
+        scattered_rewards: torch.FloatTensor = self.df_scores.scatter(
+            0, torch.tensor(uids).to(self.device), rewards
+        ).to(self.device)
+        bt.logging.debug(f"Scattered rewards: {rewards}")
+
+        # Update scores with rewards produced by this step.
+        # shape: [metagraph.n]
+        alpha: float = self.config.neuron.moving_average_alpha
+
+        # Compute exponential moving average.
+        self.df_scores: torch.FloatTensor = alpha * scattered_rewards + (1 - alpha) * self.df_scores.to(self.device)
+
+        bt.logging.debug(f"Updated scores: {self.df_scores}")
+
+        # Vous pouvez calculer la moyenne et assigner la moyenne calculée aux scores
+        average_tokens_score = torch.mean(self.df_scores)
+        self.df_scores = self.df_scores * (average_tokens_score / torch.mean(self.df_scores))
+
+        bt.logging.debug(f"Updated average pixels g/s score: {self.df_scores}")
+
     def save_state(self):
         """Saves the state of the validator to a file."""
         bt.logging.info("Saving validator state.")
@@ -333,6 +401,7 @@ class BaseValidatorNeuron(BaseNeuron):
             {
                 "step": self.step,
                 "scores": self.scores,
+                "cp_scores": self.cp_scores,
                 "hotkeys": self.hotkeys,
             },
             self.config.neuron.full_path + "/state.pt",
@@ -346,4 +415,5 @@ class BaseValidatorNeuron(BaseNeuron):
         state = torch.load(self.config.neuron.full_path + "/state.pt")
         self.step = state["step"]
         self.scores = state["scores"]
+        self.cp_scores = state["cp_scores"]
         self.hotkeys = state["hotkeys"]

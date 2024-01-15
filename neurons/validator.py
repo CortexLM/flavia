@@ -24,14 +24,14 @@ import time
 import bittensor as bt
 
 # Bittensor Validator Template:
-import template
-from template.validator import forward
+import flavia
+from flavia.validator import forward
 import random
 # import base validator class which takes care of most of the boilerplate
-from template.base.validator import BaseValidatorNeuron
-from template.utils.daemon import DaemonClient
+from flavia.base.validator import BaseValidatorNeuron
+from flavia.utils.daemon import DaemonClient
 # For prompt generation
-from transformers import pipeline
+from transformers import pipeline, AutoTokenizer
 # Load prompt dataset.
 from datasets import load_dataset
 class Validator(BaseValidatorNeuron):
@@ -49,8 +49,10 @@ class Validator(BaseValidatorNeuron):
         bt.logging.info("load_state()")
         self.load_state()
         self.diffusiondb = iter(load_dataset("poloclub/diffusiondb", trust_remote_code=True)['train'].shuffle(seed=random.randint(0, 1000000)).to_iterable_dataset())
-        self.instructions_dataset = iter(load_dataset("nlpie/Llama2-MedTuned-Instructions", trust_remote_code=True)['train'].shuffle(seed=random.randint(0, 1000000)).to_iterable_dataset())
+        self.instructions_dataset = iter(load_dataset("cognitivecomputations/dolphin", "flan1m-alpaca-uncensored", trust_remote_code=True)['train'].shuffle(seed=random.randint(0, 1000000)).to_iterable_dataset())
         self.magic_prompt = pipeline("text-generation", model="Gustavosta/MagicPrompt-Dalle")
+        self.tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen-72B-Chat", trust_remote_code=True)
+
         self.daemon = DaemonClient(base_url=self.config.sense.base_url, api_key=self.config.sense.api_key)
         self.miners_already_queried = set()
 
