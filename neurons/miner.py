@@ -15,9 +15,9 @@ from torchvision import transforms
 from starlette.types import Send
 from abc import ABC, abstractmethod
 from typing import List, Dict, Tuple, Union, Callable, Awaitable
-from template.utils.daemon import DaemonClient
+from flavia.utils.daemon import DaemonClient
 import numpy as np
-from template.protocol import TextInteractive, TextCompletion, TextToImage, ImageToImage, isOnline, Models, StartModel, ServerInfo, StopModel
+from flavia.protocol import TextInteractive, TextCompletion, TextToImage, ImageToImage, isOnline, Models, StartModel, ServerInfo, StopModel
 bt.debug()
 from io import BytesIO
 transform_b64_bt = transforms.Compose([
@@ -129,7 +129,7 @@ class StreamMiner(ABC):
                 bt.logging.info(f"question is {prompt} with model {model}")
                 buffer = []
                 N=1
-                for chunk in self.daemon.send_text_generation_interactive(model_name = synapse.model, prompt = synapse.prompt, temperature = synapse.temperature, repetition_penalty = synapse.repetition_penalty, top_p = synapse.top_p, top_k = synapse.top_k, max_tokens = synapse.max_tokens):
+                async for chunk in self.daemon.send_text_generation_interactive(model_name = synapse.model, prompt = synapse.prompt, temperature = synapse.temperature, repetition_penalty = synapse.repetition_penalty, top_p = synapse.top_p, top_k = synapse.top_k, max_tokens = synapse.max_tokens):
                     token = chunk['text']
                     buffer.append(token)
                     if len(buffer) == N:
@@ -172,7 +172,7 @@ class StreamMiner(ABC):
                 bt.logging.info(f"question is {messages} with model {model}")
                 buffer = []
                 N=1
-                for chunk in self.daemon.send_text_generation_completions(model = synapse.model, messages = synapse.messages, temperature = synapse.temperature, repetition_penalty = synapse.repetition_penalty, top_p = synapse.top_p,max_tokens = synapse.max_tokens):
+                async for chunk in self.daemon.send_text_generation_completions(model = synapse.model, messages = synapse.messages, temperature = synapse.temperature, repetition_penalty = synapse.repetition_penalty, top_p = synapse.top_p,max_tokens = synapse.max_tokens):
                     token = chunk['text']
                     token = token.replace('\n', '<newline>')
                     buffer.append(token)
@@ -206,7 +206,7 @@ class StreamMiner(ABC):
 
     async def _text2image(self, synapse: TextToImage) -> TextToImage:
         bt.logging.debug(synapse)
-        r_output = self.daemon.send_text_to_image_request(model=synapse.model, prompt=synapse.prompt, height=synapse.height, width=synapse.width, num_inference_steps=synapse.num_inference_steps, seed=synapse.seed, batch_size=synapse.batch_size, refiner=synapse.refiner)
+        r_output = await self.daemon.send_text_to_image_request(model=synapse.model, prompt=synapse.prompt, height=synapse.height, width=synapse.width, num_inference_steps=synapse.num_inference_steps, seed=synapse.seed, batch_size=synapse.batch_size, refiner=synapse.refiner)
         tensor_images = [bt.Tensor.serialize( transform_b64_bt(base64_image) ) for base64_image in r_output['images']]
 
         synapse.output = tensor_images
@@ -215,7 +215,7 @@ class StreamMiner(ABC):
         tensor = bt.Tensor.deserialize(synapse.image);
         pil_image = tensor_to_pil(tensor)
         base64_image = pil_to_base64(pil_image)
-        r_output = self.daemon.send_image_to_image_request(model=synapse.model, image=base64_image, prompt=synapse.prompt, height=synapse.height, width=synapse.width, strength=synapse.strength, seed=synapse.seed, batch_size=synapse.batch_size)
+        r_output = await self.daemon.send_image_to_image_request(model=synapse.model, image=base64_image, prompt=synapse.prompt, height=synapse.height, width=synapse.width, strength=synapse.strength, seed=synapse.seed, batch_size=synapse.batch_size)
         
         tensor_images = [bt.Tensor.serialize( transform_b64_bt(base64_image) ) for base64_image in r_output['images']]
 
