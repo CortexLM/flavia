@@ -6,3 +6,4 @@ transformers
 datasets
 scikit-image
 tiktoken
+loguru
