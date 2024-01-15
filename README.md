@@ -46,7 +46,7 @@ The Flavia project is a sub-network of the Bittensor network, focused on decentr
 
 ```pm2 start "python3 neurons/miner.py --netuid 17 --wallet.name <coldkey> --wallet.hotkey <hotkey> --sense.base_url http://host:port --sense.api_key (your api key) --logging.debug"```
 
-```pm2 start run_update_all.py"``` (for auto updater)
+```pm2 start run_update_all.py``` (for auto updater)
 
 
 **Run a validator:**
