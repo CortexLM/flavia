@@ -36,7 +36,7 @@ class SenseProcessManager:
         run(pm2_command, shell=True, check=True)
 
     @staticmethod
-    def check_for_updates(process_name, interval=2):
+    def check_for_updates(process_name, interval=60):
         updater = AutoUpdater()
         while True:
             time.sleep(interval)

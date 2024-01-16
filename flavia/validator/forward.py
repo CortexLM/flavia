@@ -112,7 +112,7 @@ async def forward(self):
             return uid, None, None, None, None, None, None, None
 
     # Select miner UIDs to query
-    miner_uids = get_random_uids(self, k=25)
+    miner_uids = get_random_uids(self, k=10)
 
     # Run queries asynchronously
     tasks = [query_miner_image(uid) for uid in miner_uids]
@@ -143,41 +143,51 @@ async def forward(self):
     self.update_scores(rewards_tensor , miner_uids)
     # self.update_df_scores(rewards_tensor_df , miner_uids)
     # Select miner UIDs to query
-    miner_uids = get_random_uids(self, k=25)
+    miner_uids_cp = get_random_uids(self, k=25)
     # Run queries asynchronously
-    tasks_cp = [query_miner_completions(uid) for uid in miner_uids]
+    tasks_cp = [query_miner_completions(uid) for uid in miner_uids_cp]
     responses_cp = await asyncio.gather(*tasks_cp)
     rewards = {}
-    cp_rewards = {}
+    cp_speed = {}
     async def process_responses(responses_cp):
         for uid, model, messages, completion, max_tokens, repetition_penalty, top_p, duration in responses_cp:
             if len(completion) > 0:
                 # Assuming check_similarity_completion can be an async function
                 if await check_similarity_completion(self, uid=uid, model=model, messages=messages, completion=completion, temperature=0, repetition_penalty=repetition_penalty, top_p=top_p, max_tokens=max_tokens):
-                    cp_rewards[uid] = await calculate_speed_text(self, completion=completion, duration=duration)
+                    cp_speed[uid] = await calculate_speed_text(self, completion=completion, duration=duration)
                     rewards[uid] = 1
                 else:
-                    cp_rewards[uid] = 0
+                    cp_speed[uid] = 0
                     rewards[uid] = 0
             else:
-                cp_rewards[uid] = 0
+                cp_speed[uid] = 0
                 rewards[uid] = 0
         return rewards
     
     asyncio.run(process_responses(responses_cp))
 
-    max_speed = self.cp_scores.max()
-    min_speed = self.cp_scores.min()
+    # Convertissez cp_speed en un tenseur
+    cp_speed_tensor = torch.FloatTensor(list(cp_speed.values()))
+    rewards_tensor = torch.FloatTensor(list(rewards.values()))
 
-    if max_speed != min_speed:
-        speed_factor = 0.7 + 0.3 * ((max_speed - min_speed) / (max_speed - min_speed))
+    max_cp_speed_weight = 0.3
+
+    tolerance_rate = 0.1
+
+    cp_speed_weight = min(max_cp_speed_weight, max_cp_speed_weight * (1 / cp_speed_tensor.max()))
+
+    sorted_indices = cp_speed_tensor.argsort(descending=True)
+
+    num_fastest_responses = int(len(sorted_indices) * tolerance_rate)
+
+    if num_fastest_responses > 0:
+        fastest_indices = sorted_indices[:num_fastest_responses]
+        normalized_rewards = rewards_tensor.clone()
+        normalized_rewards[fastest_indices] = rewards_tensor[fastest_indices] + cp_speed_weight
+        normalized_rewards = (normalized_rewards - normalized_rewards.min()) / (normalized_rewards.max() - normalized_rewards.min())
     else:
-        speed_factor = 1.0 
+        normalized_rewards = rewards_tensor.clone()
 
-    adjusted_rewards = {key: value * speed_factor if key in self.cp_scores else value for key, value in rewards.items()}
+    self.update_scores(normalized_rewards, miner_uids_cp)
 
-    cp_rewards_tensor = torch.FloatTensor(list(cp_rewards.values()))
-    rewards_tensor = torch.FloatTensor(list(adjusted_rewards.values()))
-    self.update_scores(rewards_tensor , miner_uids)
-    self.update_cp_scores(cp_rewards_tensor , miner_uids)
-    bt.logging.info("rewards", rewards_tensor)
+    bt.logging.info("rewards", normalized_rewards)
