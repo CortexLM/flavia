@@ -46,8 +46,8 @@ class Validator(BaseValidatorNeuron):
     def __init__(self, config=None):
         super(Validator, self).__init__(config=config)
 
-        bt.logging.info("load_state()")
-        self.load_state()
+        bt.logging.info("load_state() -> removed")
+        # self.load_state()
         self.diffusiondb = iter(load_dataset("poloclub/diffusiondb", trust_remote_code=True)['train'].shuffle(seed=random.randint(0, 1000000)).to_iterable_dataset())
         self.instructions_dataset = iter(load_dataset("cognitivecomputations/dolphin", "flan1m-alpaca-uncensored", trust_remote_code=True)['train'].shuffle(seed=random.randint(0, 1000000)).to_iterable_dataset())
         self.magic_prompt = pipeline("text-generation", model="Gustavosta/MagicPrompt-Dalle")
