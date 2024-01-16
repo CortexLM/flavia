@@ -168,6 +168,7 @@ async def forward(self):
 
     # Convertissez cp_speed en un tenseur
     cp_speed_tensor = torch.FloatTensor(list(cp_speed.values()))
+    rewards_tensor = torch.FloatTensor(list(rewards.values()))
 
     max_cp_speed_weight = 0.3
 
