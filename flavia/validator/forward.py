@@ -64,7 +64,7 @@ async def forward(self):
             return uid, response, prompt, random_steps, seed, height, width, refiner, duration
         except Exception as e:
             bt.logging.error(f"Error querying miner {uid}: {e}")
-            return uid, None, None, None, None, None, None, None
+            return uid, None, None, None, None, None, None, None, None
         
     async def query_miner_completions(uid):
 
@@ -109,7 +109,7 @@ async def forward(self):
 
         except Exception as e:
             bt.logging.error(f"Error querying miner {uid}: {e}")
-            return uid, None, None, None, None, None, None, None
+            return uid, None, None, None, None, None, None, None,
 
     # Select miner UIDs to query
     miner_uids = get_random_uids(self, k=10)
