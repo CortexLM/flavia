@@ -401,7 +401,6 @@ class BaseValidatorNeuron(BaseNeuron):
             {
                 "step": self.step,
                 "scores": self.scores,
-                "cp_scores": self.cp_scores,
                 "hotkeys": self.hotkeys,
             },
             self.config.neuron.full_path + "/state.pt",
@@ -415,5 +414,4 @@ class BaseValidatorNeuron(BaseNeuron):
         state = torch.load(self.config.neuron.full_path + "/state.pt")
         self.step = state["step"]
         self.scores = state["scores"]
-        self.cp_scores = state["cp_scores"]
         self.hotkeys = state["hotkeys"]

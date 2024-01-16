@@ -148,36 +148,38 @@ async def forward(self):
     tasks_cp = [query_miner_completions(uid) for uid in miner_uids]
     responses_cp = await asyncio.gather(*tasks_cp)
     rewards = {}
-    cp_rewards = {}
+    cp_speed = {}
     async def process_responses(responses_cp):
         for uid, model, messages, completion, max_tokens, repetition_penalty, top_p, duration in responses_cp:
             if len(completion) > 0:
                 # Assuming check_similarity_completion can be an async function
                 if await check_similarity_completion(self, uid=uid, model=model, messages=messages, completion=completion, temperature=0, repetition_penalty=repetition_penalty, top_p=top_p, max_tokens=max_tokens):
-                    cp_rewards[uid] = await calculate_speed_text(self, completion=completion, duration=duration)
+                    cp_speed[uid] = await calculate_speed_text(self, completion=completion, duration=duration)
                     rewards[uid] = 1
                 else:
-                    cp_rewards[uid] = 0
+                    cp_speed[uid] = 0
                     rewards[uid] = 0
             else:
-                cp_rewards[uid] = 0
+                cp_speed[uid] = 0
                 rewards[uid] = 0
         return rewards
     
     asyncio.run(process_responses(responses_cp))
 
-    max_speed = self.cp_scores.max()
-    min_speed = self.cp_scores.min()
+    # Convertissez cp_speed en un tenseur
+    cp_speed_tensor = torch.FloatTensor(list(cp_speed.values()))
 
-    if max_speed != min_speed:
-        speed_factor = 0.7 + 0.3 * ((max_speed - min_speed) / (max_speed - min_speed))
-    else:
-        speed_factor = 1.0 
+    # Poids pour cp_speed (0.3 dans votre cas)
+    cp_speed_weight = 0.3
 
-    adjusted_rewards = {key: value * speed_factor if key in self.cp_scores else value for key, value in rewards.items()}
+    # Calculez les récompenses pondérées
+    weighted_rewards = rewards_tensor + cp_speed_weight * cp_speed_tensor
 
-    cp_rewards_tensor = torch.FloatTensor(list(cp_rewards.values()))
-    rewards_tensor = torch.FloatTensor(list(adjusted_rewards.values()))
-    self.update_scores(rewards_tensor , miner_uids)
-    self.update_cp_scores(cp_rewards_tensor , miner_uids)
-    bt.logging.info("rewards", rewards_tensor)
+    # Normalisez les récompenses pour avoir un score entre 0 et 1
+    normalized_rewards = (weighted_rewards - weighted_rewards.min()) / (weighted_rewards.max() - weighted_rewards.min())
+
+    # Mettez à jour les scores avec les récompenses normalisées
+    self.update_scores(normalized_rewards, miner_uids)
+
+    # Imprimez les récompenses normalisées
+    bt.logging.info("rewards", normalized_rewards)
