@@ -112,7 +112,7 @@ class DaemonClient:
         }
         data = json.dumps(payload)
         
-        return self.send_stream_request_with_retry(url, payload)
+        return await self.send_stream_request_with_retry(url, payload)
 
 
     async def send_text_generation_completions(self, model, messages, temperature, repetition_penalty, top_p, max_tokens):
@@ -125,4 +125,4 @@ class DaemonClient:
             "max_tokens": max_tokens
         }
         data = json.dumps(payload)
-        return self.send_stream_request_with_retry(url, payload)
+        return await self.send_stream_request_with_retry(url, payload)
