@@ -170,7 +170,7 @@ async def forward(self):
     cp_speed_tensor = torch.FloatTensor(list(cp_speed.values()))
     rewards_tensor = torch.FloatTensor(list(rewards.values()))
 
-    max_cp_speed_weight = 0.3
+    max_cp_speed_weight = 0.5
 
     tolerance_rate = 0.1
 
