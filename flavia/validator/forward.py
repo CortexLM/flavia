@@ -169,17 +169,19 @@ async def forward(self):
     # Convertissez cp_speed en un tenseur
     cp_speed_tensor = torch.FloatTensor(list(cp_speed.values()))
 
-    # Poids pour cp_speed (0.3 dans votre cas)
-    cp_speed_weight = 0.3
+    max_cp_speed_weight = 0.3
 
-    # Calculez les récompenses pondérées
-    weighted_rewards = rewards_tensor + cp_speed_weight * cp_speed_tensor
+    cp_speed_weight = min(max_cp_speed_weight, max_cp_speed_weight * (1 / cp_speed_tensor.max()))
 
-    # Normalisez les récompenses pour avoir un score entre 0 et 1
-    normalized_rewards = (weighted_rewards - weighted_rewards.min()) / (weighted_rewards.max() - weighted_rewards.min())
+    normalized_rewards = rewards_tensor.clone()
 
-    # Mettez à jour les scores avec les récompenses normalisées
+    non_zero_indices = rewards_tensor.nonzero(as_tuple=True)
+
+    if len(non_zero_indices[0]) > 0:
+        non_zero_rewards = rewards_tensor[non_zero_indices]
+        normalized_rewards[non_zero_indices] = non_zero_rewards + cp_speed_weight * cp_speed_tensor[non_zero_indices]
+        normalized_rewards = (normalized_rewards - normalized_rewards.min()) / (normalized_rewards.max() - normalized_rewards.min())
+
     self.update_scores(normalized_rewards, miner_uids)
 
-    # Imprimez les récompenses normalisées
     bt.logging.info("rewards", normalized_rewards)
