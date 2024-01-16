@@ -10,7 +10,7 @@ class SenseProcessManager:
         pass
 
     @staticmethod
-    def check_for_updates(interval=2):
+    def check_for_updates(interval=60):
         updater = AutoUpdater()
         while True:
             time.sleep(interval)
