@@ -171,16 +171,21 @@ async def forward(self):
 
     max_cp_speed_weight = 0.3
 
+    tolerance_rate = 0.25
+
     cp_speed_weight = min(max_cp_speed_weight, max_cp_speed_weight * (1 / cp_speed_tensor.max()))
 
-    normalized_rewards = rewards_tensor.clone()
+    sorted_indices = cp_speed_tensor.argsort(descending=True)
 
-    non_zero_indices = rewards_tensor.nonzero(as_tuple=True)
+    num_fastest_responses = int(len(sorted_indices) * tolerance_rate)
 
-    if len(non_zero_indices[0]) > 0:
-        non_zero_rewards = rewards_tensor[non_zero_indices]
-        normalized_rewards[non_zero_indices] = non_zero_rewards + cp_speed_weight * cp_speed_tensor[non_zero_indices]
+    if num_fastest_responses > 0:
+        fastest_indices = sorted_indices[:num_fastest_responses]
+        normalized_rewards = rewards_tensor.clone()
+        normalized_rewards[fastest_indices] = rewards_tensor[fastest_indices] + cp_speed_weight
         normalized_rewards = (normalized_rewards - normalized_rewards.min()) / (normalized_rewards.max() - normalized_rewards.min())
+    else:
+        normalized_rewards = rewards_tensor.clone()
 
     self.update_scores(normalized_rewards, miner_uids)
 
