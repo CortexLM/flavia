@@ -143,9 +143,9 @@ async def forward(self):
     self.update_scores(rewards_tensor , miner_uids)
     # self.update_df_scores(rewards_tensor_df , miner_uids)
     # Select miner UIDs to query
-    miner_uids = get_random_uids(self, k=25)
+    miner_uids_cp = get_random_uids(self, k=25)
     # Run queries asynchronously
-    tasks_cp = [query_miner_completions(uid) for uid in miner_uids]
+    tasks_cp = [query_miner_completions(uid) for uid in miner_uids_cp]
     responses_cp = await asyncio.gather(*tasks_cp)
     rewards = {}
     cp_speed = {}
@@ -187,6 +187,6 @@ async def forward(self):
     else:
         normalized_rewards = rewards_tensor.clone()
 
-    self.update_scores(normalized_rewards, miner_uids)
+    self.update_scores(normalized_rewards, miner_uids_cp)
 
     bt.logging.info("rewards", normalized_rewards)
