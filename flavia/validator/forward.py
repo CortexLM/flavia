@@ -112,7 +112,7 @@ async def forward(self):
             return uid, None, None, None, None, None, None, None
 
     # Select miner UIDs to query
-    miner_uids = get_random_uids(self, k=25)
+    miner_uids = get_random_uids(self, k=10)
 
     # Run queries asynchronously
     tasks = [query_miner_image(uid) for uid in miner_uids]
