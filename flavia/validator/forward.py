@@ -172,7 +172,7 @@ async def forward(self):
 
     max_cp_speed_weight = 0.3
 
-    tolerance_rate = 0.25
+    tolerance_rate = 0.1
 
     cp_speed_weight = min(max_cp_speed_weight, max_cp_speed_weight * (1 / cp_speed_tensor.max()))
 
