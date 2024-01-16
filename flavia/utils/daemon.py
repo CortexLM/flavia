@@ -15,8 +15,8 @@ class DaemonClient:
                         if response.status == 200:
                             return await response.json()
                         else:
-                            raise aiohttp.HttpProcessingError()
-            except (aiohttp.ClientError, aiohttp.HttpProcessingError, json.JSONDecodeError):
+                            raise aiohttp.ClientResponseError(response.request_info, response.history, status=response.status)
+            except aiohttp.ClientError:
                 try_count += 1
                 await asyncio.sleep(1)
 
@@ -38,8 +38,8 @@ class DaemonClient:
                                     except json.JSONDecodeError:
                                         pass  # Gérer l'erreur de décodage si nécessaire
                         else:
-                            raise aiohttp.HttpProcessingError()
-            except (aiohttp.ClientError, aiohttp.HttpProcessingError):
+                            raise aiohttp.ClientResponseError(response.request_info, response.history, status=response.status)
+            except aiohttp.ClientError:
                 try_count += 1
                 await asyncio.sleep(1)    
     async def send_text_to_image_request(self, model, prompt, height, width, num_inference_steps, seed, batch_size, refiner):
