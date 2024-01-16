@@ -1,47 +1,10 @@
 import aiohttp
 import json
-import asyncio
 class DaemonClient:
     def __init__(self, base_url='http://127.0.0.1:8000', api_key=None):
         self.base_url = base_url
         self.headers = {'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json',} if api_key else {}
 
-    async def send_request_with_retry(self, url, payload, max_retries=1, timeout=15):
-        try_count = 0
-        while try_count < max_retries:
-            try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(url, json=payload, headers=self.headers, timeout=timeout) as response:
-                        if response.status == 200:
-                            return await response.json()
-                        else:
-                            raise aiohttp.ClientResponseError(response.request_info, response.history, status=response.status)
-            except aiohttp.ClientError:
-                try_count += 1
-                await asyncio.sleep(1)
-
-        return None
-    
-    async def send_stream_request_with_retry(self, url, payload, max_retries=2, timeout=15):
-        try_count = 0
-        while try_count < max_retries:
-            try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(url, json=payload, headers=self.headers, timeout=timeout) as response:
-                        if response.status == 200:
-                            async for line in response.content:
-                                if line:
-                                    decoded_line = line.decode('utf-8')
-                                    try:
-                                        json_data = json.loads(decoded_line)
-                                        yield json_data
-                                    except json.JSONDecodeError:
-                                        pass  # Gérer l'erreur de décodage si nécessaire
-                        else:
-                            raise aiohttp.ClientResponseError(response.request_info, response.history, status=response.status)
-            except aiohttp.ClientError:
-                try_count += 1
-                await asyncio.sleep(1)    
     async def send_text_to_image_request(self, model, prompt, height, width, num_inference_steps, seed, batch_size, refiner):
         """
         Asynchronously sends a text-to-image request to the server.
@@ -69,7 +32,9 @@ class DaemonClient:
             "batch_size": batch_size,
             "refiner": refiner
         }
-        return await self.send_request_with_retry(url, payload)
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=payload, headers=self.headers) as response:
+                return await response.json()
 
     async def send_image_to_image_request(self, image, model, prompt, height, width, strength, seed, batch_size):
         """
@@ -98,7 +63,9 @@ class DaemonClient:
             "seed": seed,
             "batch_size": batch_size
         }
-        return await self.send_request_with_retry(url, payload)
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=payload, headers=self.headers) as response:
+                return await response.json()
 
     async def send_text_generation_interactive(self, model, prompt, temperature, repetition_penalty, top_p, top_k, max_tokens):
         url = f"{self.base_url}/text_generation/{model}/chat/interactive"
@@ -112,9 +79,18 @@ class DaemonClient:
         }
         data = json.dumps(payload)
         
-        async for json_data in self.send_stream_request_with_retry(url, payload):
-            yield json_data
-            pass
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, data=data, headers=self.headers) as response:
+                async for line in response.content:
+                    if line:
+                        decoded_line = line.decode('utf-8')
+                        try:
+                            # Load the JSON from the line
+                            json_data = json.loads(decoded_line)
+                            yield json_data
+                        except json.JSONDecodeError:
+                            # If the line is not a valid JSON, ignore
+                            pass
 
 
     async def send_text_generation_completions(self, model, messages, temperature, repetition_penalty, top_p, max_tokens):
@@ -127,6 +103,15 @@ class DaemonClient:
             "max_tokens": max_tokens
         }
         data = json.dumps(payload)
-        async for json_data in self.send_stream_request_with_retry(url, payload):
-            yield json_data
-            pass
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, data=data, headers=self.headers) as response:
+                async for line in response.content:
+                    if line:
+                        decoded_line = line.decode('utf-8')
+                        try:
+                            # Load the JSON from the line
+                            json_data = json.loads(decoded_line)
+                            yield json_data
+                        except json.JSONDecodeError:
+                            # If the line is not a valid JSON, ignore
+                            pass
