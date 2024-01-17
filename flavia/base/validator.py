@@ -356,7 +356,7 @@ class BaseValidatorNeuron(BaseNeuron):
 
         # Update scores with rewards produced by this step.
         # shape: [metagraph.n]
-        alpha: float = 0.20
+        alpha: float = 0.25
 
         # Compute exponential moving average.
         self.cp_scores: torch.FloatTensor = alpha * scattered_rewards + (1 - alpha) * self.cp_scores.to(self.device)
