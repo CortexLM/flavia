@@ -45,6 +45,7 @@ def get_random_uids(self, k: int, exclude: List[int] = None) -> torch.LongTensor
     # Si tous les UIDs disponibles ont été interrogés, réinitialisez la liste
     if len(avail_uids) == len(self.miners_already_queried):
         self.miners_already_queried.clear()
+        self.update_average = True
         # Vous pourriez vouloir rappeler get_random_uids ici pour reprendre le processus
         # return self.get_random_uids(k, exclude)
 

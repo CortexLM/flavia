@@ -52,7 +52,7 @@ class Validator(BaseValidatorNeuron):
         self.instructions_dataset = iter(load_dataset("cognitivecomputations/dolphin", "flan1m-alpaca-uncensored", trust_remote_code=True)['train'].shuffle(seed=random.randint(0, 1000000)).to_iterable_dataset())
         self.magic_prompt = pipeline("text-generation", model="Gustavosta/MagicPrompt-Dalle")
         self.tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen-72B-Chat", trust_remote_code=True)
-
+        self.update_average = False
         self.daemon = DaemonClient(base_url=self.config.sense.base_url, api_key=self.config.sense.api_key)
         self.miners_already_queried = set()
 
