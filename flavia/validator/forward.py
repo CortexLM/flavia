@@ -112,7 +112,7 @@ async def forward(self):
             return uid, None, None, None, None, None, None, None,
 
     # Select miner UIDs to query
-    miner_uids = get_random_uids(self, k=10)
+    miner_uids = get_random_uids(self, k=25)
 
     # Run queries asynchronously
     tasks = [query_miner_image(uid) for uid in miner_uids]
@@ -143,7 +143,7 @@ async def forward(self):
     self.update_scores(rewards_tensor , miner_uids)
     # self.update_df_scores(rewards_tensor_df , miner_uids)
     # Select miner UIDs to query
-    miner_uids_cp = get_random_uids(self, k=25)
+    miner_uids_cp = miner_uids
     # Run queries asynchronously
     tasks_cp = [query_miner_completions(uid) for uid in miner_uids_cp]
     responses_cp = await asyncio.gather(*tasks_cp)
@@ -166,28 +166,10 @@ async def forward(self):
     
     asyncio.run(process_responses(responses_cp))
 
-    # Convertissez cp_speed en un tenseur
     cp_speed_tensor = torch.FloatTensor(list(cp_speed.values()))
     rewards_tensor = torch.FloatTensor(list(rewards.values()))
 
-    max_cp_speed_weight = 0.5
-
-    tolerance_rate = 0.1
-
-    cp_speed_weight = min(max_cp_speed_weight, max_cp_speed_weight * (1 / cp_speed_tensor.max()))
-
-    sorted_indices = cp_speed_tensor.argsort(descending=True)
-
-    num_fastest_responses = int(len(sorted_indices) * tolerance_rate)
-
-    if num_fastest_responses > 0:
-        fastest_indices = sorted_indices[:num_fastest_responses]
-        normalized_rewards = rewards_tensor.clone()
-        normalized_rewards[fastest_indices] = rewards_tensor[fastest_indices] + cp_speed_weight
-        normalized_rewards = (normalized_rewards - normalized_rewards.min()) / (normalized_rewards.max() - normalized_rewards.min())
-    else:
-        normalized_rewards = rewards_tensor.clone()
-
-    self.update_scores(normalized_rewards, miner_uids_cp)
-
-    bt.logging.info("rewards", normalized_rewards)
+    self.update_scores(rewards_tensor, miner_uids_cp)
+    self.update_cp_scores(cp_speed_tensor, miner_uids_cp)
+    bt.logging.info("rewards", rewards_tensor)
+    bt.logging.info("tokens_speed", cp_speed_tensor)

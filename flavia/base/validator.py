@@ -50,7 +50,7 @@ class BaseValidatorNeuron(BaseNeuron):
         self.scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
         self.cp_scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
         self.df_scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
-        self.moving_averaged_scores = None;
+        self.moving_averaged_scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32);
 
 
         # Init sync with the network. Updates the metagraph.
@@ -214,11 +214,10 @@ class BaseValidatorNeuron(BaseNeuron):
         """
 
         # Check if self.scores contains any NaN values and log a warning if it does.
-        if torch.isnan(self.scores).any():
+        if torch.isnan(self.moving_averaged_scores).any():
             bt.logging.warning(
                 f"Scores contain NaN values. This may be due to a lack of responses from miners, or a bug in your reward functions."
             )
-        self.moving_averaged_scores = self.scores
         # Calculate the average reward for each uid across non-zero values.
         # Replace any NaN values with 0.
         raw_weights = torch.nn.functional.normalize(
@@ -324,8 +323,21 @@ class BaseValidatorNeuron(BaseNeuron):
         self.scores: torch.FloatTensor = alpha * scattered_rewards + (
             1 - alpha
         ) * self.scores.to(self.device)
-        bt.logging.debug(f"Updated moving avg scores: {self.scores}")
+        bt.logging.debug(f"Updated scores: {self.scores}")
+        if self.update_average:
+            self.update_average = False
+            self.cp_scores = 1 / (1 + torch.exp(-self.cp_scores))
 
+            weight_self_scores = 0.7
+            weight_self_cp_scores = 0.3
+
+            non_zero_mask = self.scores != 0
+
+            final_weights = torch.zeros_like(self.scores, dtype=torch.float32)
+            final_weights[non_zero_mask] = (weight_self_scores * self.scores[non_zero_mask]) + (weight_self_cp_scores * self.cp_scores[non_zero_mask])
+
+            bt.logging.debug(f"Updated moving avg scores: {self.moving_averaged_scores}")
+            
     def update_cp_scores(self, rewards: torch.FloatTensor, uids: List[int]):
         """Performs exponential moving average on the scores based on the rewards received from the miners."""
 
@@ -346,7 +358,7 @@ class BaseValidatorNeuron(BaseNeuron):
 
         # Update scores with rewards produced by this step.
         # shape: [metagraph.n]
-        alpha: float = self.config.neuron.moving_average_alpha
+        alpha: float = 0.15
 
         # Compute exponential moving average.
         self.cp_scores: torch.FloatTensor = alpha * scattered_rewards + (1 - alpha) * self.cp_scores.to(self.device)
