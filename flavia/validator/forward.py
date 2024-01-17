@@ -172,4 +172,4 @@ async def forward(self):
     self.update_scores(rewards_tensor, miner_uids_cp)
     self.update_cp_scores(cp_speed_tensor, miner_uids_cp)
     bt.logging.info("rewards", rewards_tensor)
-    bt.logging.info("tokens_speed", rewards_tensor)
+    bt.logging.info("tokens_speed", cp_speed_tensor)
