@@ -326,14 +326,14 @@ class BaseValidatorNeuron(BaseNeuron):
         bt.logging.debug(f"Updated scores: {self.scores}")
         if self.update_average:
             self.update_average = False
-            cp_scores_exp = 1 / (1 + torch.exp(-self.cp_scores))
+            # cp_scores_exp = 1 / (1 + torch.exp(-self.cp_scores))
 
-            weight_self_scores = 0.7
-            weight_self_cp_scores = 0.3
+            # weight_self_scores = 0.7
+            # weight_self_cp_scores = 0.3
 
-            final_weights = (weight_self_scores * self.scores) + (weight_self_cp_scores * cp_scores_exp)
+            # final_weights = (weight_self_scores * self.scores) + (weight_self_cp_scores * cp_scores_exp)
 
-            self.moving_averaged_scores = final_weights
+            self.moving_averaged_scores = self.scores
             bt.logging.debug(f"Updated moving avg scores: {self.moving_averaged_scores}")
             
     def update_cp_scores(self, rewards: torch.FloatTensor, uids: List[int]):
