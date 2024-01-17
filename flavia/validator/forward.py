@@ -112,7 +112,7 @@ async def forward(self):
             return uid, None, None, None, None, None, None, None,
 
     # Select miner UIDs to query
-    miner_uids = get_random_uids(self, k=10)
+    miner_uids = get_random_uids(self, k=25)
 
     # Run queries asynchronously
     tasks = [query_miner_image(uid) for uid in miner_uids]
@@ -143,7 +143,7 @@ async def forward(self):
     self.update_scores(rewards_tensor , miner_uids)
     # self.update_df_scores(rewards_tensor_df , miner_uids)
     # Select miner UIDs to query
-    miner_uids_cp = get_random_uids(self, k=25)
+    miner_uids_cp = miner_uids
     # Run queries asynchronously
     tasks_cp = [query_miner_completions(uid) for uid in miner_uids_cp]
     responses_cp = await asyncio.gather(*tasks_cp)
@@ -166,7 +166,6 @@ async def forward(self):
     
     asyncio.run(process_responses(responses_cp))
 
-    # Convertissez cp_speed en un tenseur
     cp_speed_tensor = torch.FloatTensor(list(cp_speed.values()))
     rewards_tensor = torch.FloatTensor(list(rewards.values()))
 
@@ -189,5 +188,6 @@ async def forward(self):
         normalized_rewards = rewards_tensor.clone()
 
     self.update_scores(normalized_rewards, miner_uids_cp)
-
+    self.update_cp_scores(cp_speed_tensor, miner_uids_cp)
     bt.logging.info("rewards", normalized_rewards)
+    bt.logging.info("tokens_speed", normalized_rewards)
