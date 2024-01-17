@@ -169,25 +169,7 @@ async def forward(self):
     cp_speed_tensor = torch.FloatTensor(list(cp_speed.values()))
     rewards_tensor = torch.FloatTensor(list(rewards.values()))
 
-    max_cp_speed_weight = 0.5
-
-    tolerance_rate = 0.1
-
-    cp_speed_weight = min(max_cp_speed_weight, max_cp_speed_weight * (1 / cp_speed_tensor.max()))
-
-    sorted_indices = cp_speed_tensor.argsort(descending=True)
-
-    num_fastest_responses = int(len(sorted_indices) * tolerance_rate)
-
-    if num_fastest_responses > 0:
-        fastest_indices = sorted_indices[:num_fastest_responses]
-        normalized_rewards = rewards_tensor.clone()
-        normalized_rewards[fastest_indices] = rewards_tensor[fastest_indices] + cp_speed_weight
-        normalized_rewards = (normalized_rewards - normalized_rewards.min()) / (normalized_rewards.max() - normalized_rewards.min())
-    else:
-        normalized_rewards = rewards_tensor.clone()
-
-    self.update_scores(normalized_rewards, miner_uids_cp)
+    self.update_scores(rewards_tensor, miner_uids_cp)
     self.update_cp_scores(cp_speed_tensor, miner_uids_cp)
-    bt.logging.info("rewards", normalized_rewards)
-    bt.logging.info("tokens_speed", normalized_rewards)
+    bt.logging.info("rewards", rewards_tensor)
+    bt.logging.info("tokens_speed", rewards_tensor)
