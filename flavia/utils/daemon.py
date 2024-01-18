@@ -1,8 +1,14 @@
 import aiohttp
+import bittensor as bt
 import json
 class DaemonClient:
     def __init__(self, base_url='http://127.0.0.1:8000', api_key=None):
+        if base_url.endswith('/'):
+            # Si elle se termine par '/', supprimez-le en utilisant le slicing
+            base_url = base_url[:-1]
+        bt.logging.debug(f"Use Sense Server {base_url}")
         self.base_url = base_url
+        
         self.headers = {'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json',} if api_key else {}
 
     async def send_text_to_image_request(self, model, prompt, height, width, num_inference_steps, seed, batch_size, refiner):

@@ -149,9 +149,11 @@ class BaseValidatorNeuron(BaseNeuron):
                     self.step += 1
 
                 except Exception as err:
-                    bt.logging.error("Error during validation, wait 15s", str(err))
+                    bt.logging.error("Error during validation")
                     bt.logging.debug(print_exception(type(err), err, err.__traceback__))
-                    time.sleep(15)
+                    self.sync()
+                    self.step += 1
+                    time.sleep(1)
                     # Continue to the next iteration of the loop
                     continue
 
@@ -214,10 +216,11 @@ class BaseValidatorNeuron(BaseNeuron):
         """
 
         # Check if self.scores contains any NaN values and log a warning if it does.
-        if torch.isnan(self.moving_averaged_scores).any():
+        if torch.isnan(self.scores).any():
             bt.logging.warning(
                 f"Scores contain NaN values. This may be due to a lack of responses from miners, or a bug in your reward functions."
             )
+        self.moving_averaged_scores = self.scores
         # Calculate the average reward for each uid across non-zero values.
         # Replace any NaN values with 0.
         raw_weights = torch.nn.functional.normalize(
@@ -324,17 +327,6 @@ class BaseValidatorNeuron(BaseNeuron):
             1 - alpha
         ) * self.scores.to(self.device)
         bt.logging.debug(f"Updated scores: {self.scores}")
-        if self.update_average:
-            self.update_average = False
-            # cp_scores_exp = 1 / (1 + torch.exp(-self.cp_scores))
-
-            # weight_self_scores = 0.7
-            # weight_self_cp_scores = 0.3
-
-            # final_weights = (weight_self_scores * self.scores) + (weight_self_cp_scores * cp_scores_exp)
-
-            self.moving_averaged_scores = self.scores
-            bt.logging.debug(f"Updated moving avg scores: {self.moving_averaged_scores}")
             
     def update_cp_scores(self, rewards: torch.FloatTensor, uids: List[int]):
         """Performs exponential moving average on the scores based on the rewards received from the miners."""
