@@ -212,12 +212,13 @@ class BaseValidatorNeuron(BaseNeuron):
         """
         Sets the validator weights to the metagraph hotkeys based on the scores it has received from the miners. The weights determine the trust and incentive level the validator assigns to miner nodes on the network.
         """
-        self.scores = self.moving_averaged_scores
+
         # Check if self.scores contains any NaN values and log a warning if it does.
-        if torch.isnan(self.moving_averaged_scores).any():
+        if torch.isnan(self.scores).any():
             bt.logging.warning(
                 f"Scores contain NaN values. This may be due to a lack of responses from miners, or a bug in your reward functions."
             )
+        self.moving_averaged_scores = self.scores
         # Calculate the average reward for each uid across non-zero values.
         # Replace any NaN values with 0.
         raw_weights = torch.nn.functional.normalize(
