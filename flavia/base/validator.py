@@ -149,9 +149,11 @@ class BaseValidatorNeuron(BaseNeuron):
                     self.step += 1
 
                 except Exception as err:
-                    bt.logging.error("Error during validation, wait 15s", str(err))
+                    bt.logging.error("Error during validation")
                     bt.logging.debug(print_exception(type(err), err, err.__traceback__))
-                    time.sleep(15)
+                    self.sync()
+                    self.step += 1
+                    time.sleep(1)
                     # Continue to the next iteration of the loop
                     continue
 

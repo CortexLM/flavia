@@ -10,7 +10,7 @@ def generate_unique_instruction(self):
 def generate_max_tokens():
     # Define the range for max_tokens
     min_tokens = 128
-    max_tokens = 712
+    max_tokens = 448
 
     # Generating a list of multiples of 8 within the specified range
     valid_tokens = [i for i in range(min_tokens, max_tokens + 1) if i % 8 == 0]

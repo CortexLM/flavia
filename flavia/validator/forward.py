@@ -49,6 +49,11 @@ async def forward(self):
             random_steps = generate_random_step_with_bias()
             seed = random.randint(0, 2 ** 32 - 1)
             refiner = should_use_refiner()
+            base_timeout = 5
+            timeout_per_step = 1
+            current_timeout = base_timeout + (random_steps // 10) * timeout_per_step
+
+            
             # Perform the query
             start_time = time.time()  # Record the start time
             response = await self.dendrite(
@@ -56,7 +61,7 @@ async def forward(self):
                 synapse=TextToImage(model=model, prompt=prompt, seed=seed, num_inference_steps=random_steps, height=height, width=width, refiner=refiner),
                 deserialize=False,
                 streaming=False,
-                timeout=10
+                timeout=current_timeout
             )
             end_time = time.time()  # Record the end time
             # Calculate the duration and format it
@@ -86,7 +91,7 @@ async def forward(self):
                 synapse=TextCompletion(model=model, messages=messages, temperature=0, top_p=top_p, max_tokens=max_tokens, repetition_penalty=repetition_penalty),
                 deserialize=False,
                 streaming=True,
-                timeout=15
+                timeout=10
             )
             start_time = time.time()  # Record the start time
 
