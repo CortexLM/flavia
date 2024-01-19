@@ -278,9 +278,6 @@ class BaseValidatorNeuron(BaseNeuron):
         self.metagraph.sync(subtensor=self.subtensor)
 
         # Check if the metagraph axon info has changed.
-        if previous_metagraph.axons == self.metagraph.axons:
-            return
-
         bt.logging.info(
             "Metagraph updated, re-syncing hotkeys, dendrite pool and moving averages"
         )
