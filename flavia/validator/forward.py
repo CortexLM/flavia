@@ -124,7 +124,7 @@ async def forward(self):
     responses = await asyncio.gather(*tasks)
 
     # Process and score responses
-    if random.random() < 1:
+    if True:
         df_rewards_tensor = {}
         rewards = {}
         for uid, response, prompt, random_steps, seed, height, width, refiner, duration in responses:
@@ -154,7 +154,7 @@ async def forward(self):
     # Run queries asynchronously
     tasks_cp = [query_miner_completions(uid) for uid in miner_uids_cp]
     responses_cp = await asyncio.gather(*tasks_cp)
-    if random.random() < 1:
+    if True:
         rewards = {}
         cp_speed = {}
         async def process_responses(responses_cp):
