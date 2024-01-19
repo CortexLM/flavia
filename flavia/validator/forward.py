@@ -20,7 +20,7 @@
 import bittensor as bt
 import asyncio
 from flavia.protocol import TextCompletion, TextInteractive, ImageToImage, TextToImage
-from flavia.utils.uids import get_random_uids
+from flavia.utils.uids import get_random_uids_n, get_random_uids
 import torch
 import numpy as np
 import time
@@ -116,8 +116,22 @@ async def forward(self):
             bt.logging.error(f"Error querying miner {uid}: {e}")
             return uid, None, None, None, None, None, None, None,
 
+    while True:
+        random_number = random.random()
+
+        if random_number < 0.75:
+            break 
+        bt.logging.debug('Sent queries without scoring')
+        random_uids = get_random_uids(self, k=15)
+        tasks = [query_miner_image(uid) for uid in random_uids]
+        responses = await asyncio.gather(*tasks)
+        random_uids = get_random_uids(self, k=35)
+        tasks_cp = [query_miner_completions(uid) for uid in random_uids]
+        responses_cp = await asyncio.gather(*tasks_cp)
+
+
     # Select miner UIDs to query
-    miner_uids = get_random_uids(self, k=20)
+    miner_uids = get_random_uids_n(self, k=20)
 
     # Run queries asynchronously
     tasks = [query_miner_image(uid) for uid in miner_uids]
@@ -148,7 +162,7 @@ async def forward(self):
     self.update_scores(rewards_tensor , miner_uids)
     # self.update_df_scores(rewards_tensor_df , miner_uids)
     # Select miner UIDs to query
-    miner_uids_cp = get_random_uids(self, k=25)
+    miner_uids_cp = get_random_uids_n(self, k=25)
 
     # Run queries asynchronously
     tasks_cp = [query_miner_completions(uid) for uid in miner_uids_cp]
