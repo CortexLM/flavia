@@ -51,7 +51,8 @@ class BaseValidatorNeuron(BaseNeuron):
         self.cp_scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
         self.df_scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
         self.moving_averaged_scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32);
-
+        bt.logging.info("load_state()")
+        self.load_state()
 
         # Init sync with the network. Updates the metagraph.
         self.sync()
@@ -214,7 +215,7 @@ class BaseValidatorNeuron(BaseNeuron):
         """
         Sets the validator weights to the metagraph hotkeys based on the scores it has received from the miners. The weights determine the trust and incentive level the validator assigns to miner nodes on the network.
         """
-
+        self.resync_metagraph()
         # Check if self.scores contains any NaN values and log a warning if it does.
         if torch.isnan(self.scores).any():
             bt.logging.warning(
@@ -277,9 +278,6 @@ class BaseValidatorNeuron(BaseNeuron):
         self.metagraph.sync(subtensor=self.subtensor)
 
         # Check if the metagraph axon info has changed.
-        if previous_metagraph.axons == self.metagraph.axons:
-            return
-
         bt.logging.info(
             "Metagraph updated, re-syncing hotkeys, dendrite pool and moving averages"
         )

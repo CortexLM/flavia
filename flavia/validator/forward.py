@@ -20,7 +20,7 @@
 import bittensor as bt
 import asyncio
 from flavia.protocol import TextCompletion, TextInteractive, ImageToImage, TextToImage
-from flavia.utils.uids import get_random_uids
+from flavia.utils.uids import get_random_uids_n, get_random_uids
 import torch
 import numpy as np
 import time
@@ -97,13 +97,17 @@ async def forward(self):
 
             completion = ""
             for resp in response:
-                i = 0
-                async for chunk in resp:       
-                    if isinstance(chunk, list):
-                        completion += chunk[0].replace('<newline>', '\n')
-                    else:
-                        # last object yielded is the synapse itself with completion filled
-                        synapse = chunk
+                try:
+                    async for chunk in resp:
+                        if isinstance(chunk, list):
+                            completion += chunk[0].replace('<newline>', '\n')
+                        else:
+                            # last object yielded is the synapse itself with completion filled
+                            synapse = chunk
+                except asyncio.CancelledError:
+                    # Handle the CancelledError as needed, e.g., set completion to ""
+                    completion = ""
+                    bt.logging.error(f"Error during {uid} completion")
                 break
 
             end_time = time.time()  # Record the end time
@@ -115,64 +119,80 @@ async def forward(self):
         except Exception as e:
             bt.logging.error(f"Error querying miner {uid}: {e}")
             return uid, None, None, None, None, None, None, None,
+    try:
+        while True:
+            random_number = random.random()
 
-    # Select miner UIDs to query
-    miner_uids = get_random_uids(self, k=20)
+            if random_number < 0.25:
+                break 
+            bt.logging.debug('Sent queries without scoring')
+            random_uids = get_random_uids(self, k=15)
+            tasks = [query_miner_image(uid) for uid in random_uids]
+            responses = await asyncio.gather(*tasks)
+            random_uids = get_random_uids(self, k=35)
+            tasks_cp = [query_miner_completions(uid) for uid in random_uids]
+            responses_cp = await asyncio.gather(*tasks_cp)
 
-    # Run queries asynchronously
-    tasks = [query_miner_image(uid) for uid in miner_uids]
-    responses = await asyncio.gather(*tasks)
 
-    # Process and score responses
-    df_rewards_tensor = {}
-    rewards = {}
-    for uid, response, prompt, random_steps, seed, height, width, refiner, duration in responses:
-        if None in [uid, response, prompt, random_steps, seed, height, width, refiner]:
-            rewards[uid] = 0
-            continue;
-        response = response[0]
-        if len(response.output) > 0:
-            if await check_score_image(self, uid=uid, model=image_model, image=response.output[0], prompt=prompt, steps=random_steps, seed=seed, height=height, width=width, refiner=refiner):
-                rewards[uid] = 1
-                df_rewards_tensor[uid] = await calculate_speed_image(width=width, height=height, num_inferences_step=random_steps, duration=duration)
+        # Select miner UIDs to query
+        miner_uids = get_random_uids_n(self, k=20)
+
+        # Run queries asynchronously
+        tasks = [query_miner_image(uid) for uid in miner_uids]
+        responses = await asyncio.gather(*tasks)
+
+        # Process and score responses
+        df_rewards_tensor = {}
+        rewards = {}
+        for uid, response, prompt, random_steps, seed, height, width, refiner, duration in responses:
+            if None in [uid, response, prompt, random_steps, seed, height, width, refiner]:
+                rewards[uid] = 0
+                continue;
+            response = response[0]
+            if len(response.output) > 0:
+                if await check_score_image(self, uid=uid, model=image_model, image=response.output[0], prompt=prompt, steps=random_steps, seed=seed, height=height, width=width, refiner=refiner):
+                    rewards[uid] = 1
+                    df_rewards_tensor[uid] = await calculate_speed_image(width=width, height=height, num_inferences_step=random_steps, duration=duration)
+                else:
+                    rewards[uid] = 0
+                    df_rewards_tensor[uid] = 0
             else:
                 rewards[uid] = 0
                 df_rewards_tensor[uid] = 0
-        else:
-            rewards[uid] = 0
-            df_rewards_tensor[uid] = 0
 
-    bt.logging.info(f"Scored responses: {rewards}")
-    rewards_tensor = torch.FloatTensor(list(rewards.values()))
-    # rewards_tensor_df = torch.FloatTensor(list(df_rewards_tensor.values()))
-    self.update_scores(rewards_tensor , miner_uids)
-    # self.update_df_scores(rewards_tensor_df , miner_uids)
-    # Select miner UIDs to query
-    miner_uids_cp = get_random_uids(self, k=25)
+        bt.logging.info(f"Scored responses: {rewards}")
+        rewards_tensor = torch.FloatTensor(list(rewards.values()))
+        # rewards_tensor_df = torch.FloatTensor(list(df_rewards_tensor.values()))
+        self.update_scores(rewards_tensor , miner_uids)
+        # self.update_df_scores(rewards_tensor_df , miner_uids)
+        # Select miner UIDs to query
+        miner_uids_cp = get_random_uids_n(self, k=25)
 
-    # Run queries asynchronously
-    tasks_cp = [query_miner_completions(uid) for uid in miner_uids_cp]
-    responses_cp = await asyncio.gather(*tasks_cp)
-    rewards = {}
-    cp_speed = {}
-    async def process_responses(responses_cp):
-        for uid, model, messages, completion, max_tokens, repetition_penalty, top_p, duration in responses_cp:
-            if len(completion) > 0:
-                # Assuming check_similarity_completion can be an async function
-                if await check_similarity_completion(self, uid=uid, model=model, messages=messages, completion=completion, temperature=0, repetition_penalty=repetition_penalty, top_p=top_p, max_tokens=max_tokens):
-                    cp_speed[uid] = await calculate_speed_text(self, completion=completion, duration=duration)
-                    rewards[uid] = 1
+        # Run queries asynchronously
+        tasks_cp = [query_miner_completions(uid) for uid in miner_uids_cp]
+        responses_cp = await asyncio.gather(*tasks_cp)
+        rewards = {}
+        cp_speed = {}
+        async def process_responses(responses_cp):
+            for uid, model, messages, completion, max_tokens, repetition_penalty, top_p, duration in responses_cp:
+                if len(completion) > 0:
+                    # Assuming check_similarity_completion can be an async function
+                    if await check_similarity_completion(self, uid=uid, model=model, messages=messages, completion=completion, temperature=0, repetition_penalty=repetition_penalty, top_p=top_p, max_tokens=max_tokens):
+                        cp_speed[uid] = await calculate_speed_text(self, completion=completion, duration=duration)
+                        rewards[uid] = 1
+                    else:
+                        cp_speed[uid] = 0
+                        rewards[uid] = 0
                 else:
                     cp_speed[uid] = 0
                     rewards[uid] = 0
-            else:
-                cp_speed[uid] = 0
-                rewards[uid] = 0
-        return rewards
-    
-    asyncio.run(process_responses(responses_cp))
+            return rewards
+        
+        asyncio.run(process_responses(responses_cp))
 
-    rewards_tensor = torch.FloatTensor(list(rewards.values()))
+        rewards_tensor = torch.FloatTensor(list(rewards.values()))
 
-    self.update_scores(rewards_tensor, miner_uids_cp)
-    bt.logging.info("rewards", rewards_tensor)
+        self.update_scores(rewards_tensor, miner_uids_cp)
+        bt.logging.info("rewards", rewards_tensor)
+    except Exception as e:
+        bt.logging.error('Error during validation, next step')
