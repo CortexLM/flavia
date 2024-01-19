@@ -132,6 +132,7 @@ async def forward(self):
             tasks_cp = [query_miner_completions(uid) for uid in random_uids]
             responses_cp = await asyncio.gather(*tasks_cp)
         else:
+            bt.logging.debug('Sent queries with scoring')
             # Select miner UIDs to query
             miner_uids = get_random_uids_n(self, k=20)
 
