@@ -119,7 +119,7 @@ async def forward(self):
     while True:
         random_number = random.random()
 
-        if random_number < 0.75:
+        if random_number < 0.25:
             break 
         bt.logging.debug('Sent queries without scoring')
         random_uids = get_random_uids(self, k=15)
