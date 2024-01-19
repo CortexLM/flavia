@@ -194,6 +194,7 @@ class BaseMinerNeuron(BaseNeuron):
             Exception: If there's an error while setting weights, the exception is logged for diagnosis.
         """
         try:
+            self.resync_metagraph()
             # --- query the chain for the most current number of peers on the network
             chain_weights = torch.zeros(
                 self.subtensor.subnetwork_n(netuid=self.metagraph.netuid)
