@@ -51,7 +51,8 @@ class BaseValidatorNeuron(BaseNeuron):
         self.cp_scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
         self.df_scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
         self.moving_averaged_scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32);
-
+        bt.logging.info("load_state()")
+        self.load_state()
 
         # Init sync with the network. Updates the metagraph.
         self.sync()
