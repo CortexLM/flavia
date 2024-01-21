@@ -11,7 +11,9 @@ Execute large-scale models on the Bittensor network
 </div>
 
 #
-### ⚠️ This is an beta version. Please report any bugs or suggest any improvements.
+> [!WARNING]  
+> This is an beta version. Please report any bugs or suggest any improvements.
+
 ### 📋 Introduction
 The Flavia project is a sub-network of the Bittensor network, focused on decentralized model inference at different scales. It represents a groundbreaking innovation in the field of distributed computing, bringing a new level of efficiency and scalability to model inference tasks. This project is not just a technical achievement; it's a visionary step towards a more interconnected and collaborative digital ecosystem.
 
@@ -21,13 +23,19 @@ One of the most striking aspects of the Flavia project is its commitment to demo
 ## 🔧 Setup
 
 **NOTICE :** The execution of Flavia requires the installation of Sense for model inference, which is mandatory for miners and validators. Sense must be on a different server; to install it, <a href="https://github.com/CortexLM/sense">click here</a>.
+> [!WARNING]  
+> We strongly recommend the utilization of Python environments for mining/validating activities. This approach is crucial because code originating from various subnets can often experience packet conflicts when interacting with each other. By using isolated Python environments, developers can ensure that each subnet operates within its own dedicated space.
 
+> [!NOTE]  
+> We recommend the use of a local Subtensor.
 ### Installation
 **Clone the Repository & install the necessary requirements**
 
 ````
 git clone https://github.com/CortexLM/flavia.git && cd flavia && pip install -e .
 ````
+
+
 
 **Mining:**
 
