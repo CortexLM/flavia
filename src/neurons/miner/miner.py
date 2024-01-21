@@ -5,11 +5,15 @@ import asyncio
 from abc import ABC, abstractmethod
 from config import check_config, get_config
 import argparse
-from template.protocol import Dummy
+from flavia.protocol import TextCompletion, TextToImage
 from typing import Tuple
 import traceback
 import threading
 import time
+from starlette.types import Send
+from functools import partial
+from flavia.sense import SenseClient
+
 loop = asyncio.get_event_loop()
 class Miner(ABC):
     def __init__(self, config=None, axon=None, wallet=None, subtensor=None):
@@ -19,6 +23,8 @@ class Miner(ABC):
         # Merge provided config with default config
         self.config = copy.deepcopy(config or self.get_default_config())
         bt.logging.info(f"Configurations: {self.config}")
+
+        self.sense = SenseClient(base_url=self.config.sense.base_url, api_key=self.config.sense.api_key)
 
         # Initialize necessary Bittensor components
         self.initialize_wallet(wallet)
@@ -31,7 +37,7 @@ class Miner(ABC):
 
         # List of function pairs: each pair consists of a forward function and its corresponding blacklist function.
         axon_function_pairs = [
-            (self._dummy, self._filter_dummy),
+            (self._completion, self._filter_completion),
         ]
 
         self.initialize_axon_connections(axon_function_pairs)
@@ -101,13 +107,57 @@ class Miner(ABC):
         except Exception:
             bt.logging.error(f"errror in blacklist {traceback.format_exc()}")
 
-    def _filter_dummy(self, synapse: Dummy) -> Tuple[bool, str]:
+    def _filter_completion(self, synapse: TextCompletion) -> Tuple[bool, str]:
         blacklist = self.base_blacklist(synapse)
         bt.logging.debug(blacklist[1])
         return blacklist
+    
+    async def completion(self, synapse: TextCompletion) -> TextCompletion:
+        bt.logging.info(f"started processing for synapse {synapse}")
         
-    def _dummy(self, synapse: Dummy) -> Dummy:
-        return self.dummy(synapse)
+        
+        async def _prompt(synapse, send: Send):
+            try:
+                model = synapse.model
+                messages = synapse.messages
+                bt.logging.info(synapse)
+                bt.logging.info(f"question is {messages} with model {model}")
+                buffer = []
+                N=1
+                async for chunk in self.sense.completion(model = synapse.model, messages = synapse.messages, temperature = synapse.temperature, repetition_penalty = synapse.repetition_penalty, top_p = synapse.top_p,max_tokens = synapse.max_tokens):
+                    token = chunk['text']
+                    token = token.replace('\n', '<newline>')
+                    buffer.append(token)
+                    if len(buffer) == N:
+                        joined_buffer = "".join(buffer)
+                        await send(
+                            {
+                                "type": "http.response.body",
+                                "body": joined_buffer.encode("utf-8"),
+                                "more_body": True,
+                            }
+                        )
+                        bt.logging.info(f"Streamed tokens: {joined_buffer}")
+                        buffer = []
+
+                if buffer:
+                    joined_buffer = "".join(buffer)
+                    await send(
+                        {
+                            "type": "http.response.body",
+                            "body": joined_buffer.encode("utf-8"),
+                            "more_body": False,
+                        }
+                    )
+                    bt.logging.info(f"Streamed tokens: {joined_buffer}")
+            except Exception as e:
+                 bt.logging.error(f"error in _prompt {e}\n{traceback.format_exc()}")
+
+        token_streamer = partial(_prompt, synapse)
+        return synapse.create_streaming_response(token_streamer)
+        
+    def _completion(self, synapse: TextCompletion) -> TextCompletion:
+        return self.completion(synapse)
 
     def run_in_background_thread(self) -> None:
         if not self.is_running:
