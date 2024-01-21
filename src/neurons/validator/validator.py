@@ -23,7 +23,7 @@ class BittensorValidator:
 
     def get_config(self):
         parser = argparse.ArgumentParser()
-        parser.add_argument("--netuid", type=int, default=62)
+        parser.add_argument("--netuid", type=int, default=17)
         bt.subtensor.add_args(parser)
         bt.logging.add_args(parser)
         bt.wallet.add_args(parser)
