@@ -1,10 +1,2 @@
-pillow
 bittensor
 torch
-torchvision
-transformers
-datasets
-scikit-image
-tiktoken
-loguru
-aiohttp
