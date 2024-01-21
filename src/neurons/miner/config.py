@@ -3,6 +3,8 @@ from pathlib import Path
 
 import bittensor as bt
 
+from flavia import sense
+
 
 def check_config(cls, config: bt.config):
     bt.axon.check_config(config)
@@ -93,7 +95,10 @@ def get_config() -> bt.config:
 
     # Adds axon specific arguments i.e. --axon.port ...
     bt.axon.add_args(parser)
+    
+    # Add sense arguments i.e. --sense.base_url ...
 
+    sense.add_args(parser)
     # Activating the parser to read any command-line inputs.
     # To print help message, run python3 template/miner.py --help
     config = bt.config(parser)
