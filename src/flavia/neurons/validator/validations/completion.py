@@ -57,7 +57,7 @@ class TextCompletionValidator(BaseValidator):
                 f"completion {syn.messages}"
             )
             task = self.query_miner(metagraph, uid, syn)
-            query_tasks.append(task)
+            query_tasks.append(asyncio.create_task(task))
         rate_limit = 0.25
         query_responses = await ratelimit.run_tasks(query_tasks, rate_limit)
         return query_responses, uid_to_question, parameters    
