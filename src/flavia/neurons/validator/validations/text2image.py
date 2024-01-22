@@ -9,6 +9,7 @@ import asyncio
 import torch 
 from datasets import load_dataset
 from src.flavia.neurons.validator.utils.completion import generate_unique_instruction, generate_max_tokens, frange, generate_random_top_p, generate_repetition_penalty
+import src.flavia.neurons.validator.utils.ratelimit as ratelimit
 
 class Text2ImageValidator(BaseValidator):
     def __init__(self, dendrite, config, subtensor, wallet: bt.wallet, sense):
@@ -32,9 +33,13 @@ class Text2ImageValidator(BaseValidator):
             base_timeout = 5
             timeout_per_step = 1
             current_timeout = base_timeout + (random_steps // 10) * timeout_per_step
+
             parameters[uid] = {
-                "model":self.model, "prompt":prompt, "seed":seed, "num_inference_steps":random_steps, "height":height, "width":width, "refiner":refiner
+                "model":self.model, "prompt":prompt, "seed":seed, 
+                "num_inference_steps":random_steps, "height":height, 
+                "width":width, "refiner":refiner
             }
+
             syn = TextToImage(**parameters[uid])
             syns[uid] = syn
             bt.logging.info(
@@ -42,9 +47,14 @@ class Text2ImageValidator(BaseValidator):
                 f"with timeout {current_timeout}, "
                 f"image prompt {prompt}"
             )
+
             task = self.query_miner(metagraph, uid, syn, timeout=current_timeout)
-            query_tasks.append(task)
-        query_responses = await asyncio.gather(*query_tasks)
+            query_tasks.append(asyncio.create_task(task))
+
+        rate_limit = 0.5
+        random.shuffle(query_tasks)
+        query_responses = await ratelimit.run_tasks(query_tasks, rate_limit)
+
         return query_responses, uid_to_question, parameters    
     
     async def score_responses(

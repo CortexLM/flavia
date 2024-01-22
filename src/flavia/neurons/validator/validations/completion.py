@@ -7,6 +7,7 @@ import asyncio
 import torch 
 from datasets import load_dataset
 from src.flavia.neurons.validator.utils.completion import generate_unique_instruction, generate_max_tokens, frange, generate_random_top_p, generate_repetition_penalty
+import src.flavia.neurons.validator.utils.ratelimit as ratelimit
 
 class TextCompletionValidator(BaseValidator):
     def __init__(self, dendrite, config, subtensor, wallet: bt.wallet, sense):
@@ -57,7 +58,8 @@ class TextCompletionValidator(BaseValidator):
             )
             task = self.query_miner(metagraph, uid, syn)
             query_tasks.append(task)
-        query_responses = await asyncio.gather(*query_tasks)
+        rate_limit = 0.25
+        query_responses = await ratelimit.run_tasks(query_tasks, rate_limit)
         return query_responses, uid_to_question, parameters    
     
     async def score_responses(
