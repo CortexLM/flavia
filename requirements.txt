@@ -1,3 +1,4 @@
 bittensor
 torch
 pillow
+scikit-image
