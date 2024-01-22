@@ -15,7 +15,7 @@ class TextCompletionValidator(BaseValidator):
         self.sense = sense
         self.query_type = "text"
         self.model = "Qwen|Qwen-72B-Chat"
-        self.instructions_dataset = iter(load_dataset("cognitivecomputations/dolphin", "flan1m-alpaca-uncensored", trust_remote_code=True)['train'].shuffle(seed=random.randint(0, 1000000)).to_iterable_dataset())
+        self.instructions_dataset = load_dataset("cognitivecomputations/dolphin", "flan1m-alpaca-uncensored", trust_remote_code=True)
 
     async def handle_response(self, uid: str, responses) -> tuple[str, str]:
         completion = ""

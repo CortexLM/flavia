@@ -17,7 +17,7 @@ class Text2ImageValidator(BaseValidator):
         self.sense = sense
         self.query_type = "text2image"
         self.model = "dataautogpt3|OpenDalleV1.1"
-        self.diffusiondb = iter(load_dataset("poloclub/diffusiondb", trust_remote_code=True)['train'].shuffle(seed=random.randint(0, 1000000)).to_iterable_dataset())
+        self.sbu_captions = load_dataset("sbu_captions", trust_remote_code=True)
     
     async def start_query(self, available_uids, metagraph) -> tuple[list, dict]:
         query_tasks = []

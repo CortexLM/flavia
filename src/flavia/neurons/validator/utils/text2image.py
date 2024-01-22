@@ -2,13 +2,23 @@ import random
 import numpy as np
 
 def generate_unique_prompt(self):
-    # from ImageSubnet
-    initial_prompt = next(self.diffusiondb)['prompt']
-    initial_prompt = initial_prompt.split(' ')
-    keep = random.randint(1, len(initial_prompt))
-    keep = min(keep, 8)
-    initial_prompt = ' '.join(initial_prompt[:keep])
-    return initial_prompt
+    # Load the complete dataset from Hugging Face
+    complete_dataset = self.sbu_captions
+
+    # Select a random split if the dataset contains multiple splits (like train, test, etc.)
+    available_splits = list(complete_dataset.keys())
+    chosen_split = random.choice(available_splits)
+
+    # Load the chosen split
+    dataset_split = complete_dataset[chosen_split]
+
+    # Choose a random index
+    random_index = random.randint(0, len(dataset_split) - 1)
+
+    # Select the element at the random index
+    random_prompt = dataset_split[random_index]['caption']
+
+    return random_prompt
 
 def generate_random_size_dimension():
     # List of aspect ratios and corresponding sizes

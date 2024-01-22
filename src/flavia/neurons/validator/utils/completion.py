@@ -1,10 +1,23 @@
 import random
 
 def generate_unique_instruction(self):
-    # from ImageSubnet
-    dataset = next(self.instructions_dataset)
-    instruction = dataset['instruction']
-    input = dataset['input']
+    # Load the complete dataset from Hugging Face
+    complete_dataset = self.instructions_dataset
+
+    # Select a random split if the dataset contains multiple splits (like train, test, etc.)
+    available_splits = list(complete_dataset.keys())
+    chosen_split = random.choice(available_splits)
+
+    # Load the chosen split
+    dataset_split = complete_dataset[chosen_split]
+
+    # Choose a random index
+    random_index = random.randint(0, len(dataset_split) - 1)
+
+    # Select the element at the random index
+    random_element = dataset_split[random_index]
+    instruction = random_element['instruction']
+    input = random_element['input']
     return instruction, input
 
 def generate_max_tokens():
