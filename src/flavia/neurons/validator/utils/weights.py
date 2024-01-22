@@ -7,7 +7,7 @@ import traceback
 import random
 from typing import Awaitable
 
-from src.neurons.validator.utils.uids import check_uid_availability
+from src.flavia.neurons.validator.utils.uids import check_uid_availability
 iterations_per_set_weights = 2
 scoring_organic_timeout = 60
 

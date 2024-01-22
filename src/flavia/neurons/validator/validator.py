@@ -2,8 +2,9 @@ import sys
 import bittensor as bt
 import argparse
 from pathlib import Path
-from src.neurons.validator.validations.dummy import DummyValidator
-from src.neurons.validator.utils.weights import Weights
+from flavia import sense
+from neurons.validator.validations.completion import TextCompletionValidator
+from src.flavia.neurons.validator.utils.weights import Weights
 import asyncio 
 
 class BittensorValidator:
@@ -24,6 +25,7 @@ class BittensorValidator:
     def get_config(self):
         parser = argparse.ArgumentParser()
         parser.add_argument("--netuid", type=int, default=17)
+        sense.add_args(parser)
         bt.subtensor.add_args(parser)
         bt.logging.add_args(parser)
         bt.wallet.add_args(parser)
@@ -64,7 +66,7 @@ class BittensorValidator:
             "subtensor": self.subtensor,
             "wallet": self.wallet
         }
-        self.dummy_validator = DummyValidator(**validator_config)
+        self.dummy_validator = TextCompletionValidator(**validator_config)
         bt.logging.info("Validators initialized successfully.")
 
 if __name__ == "__main__":
