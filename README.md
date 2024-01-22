@@ -40,7 +40,7 @@ git clone https://github.com/CortexLM/flavia.git && cd flavia && pip install -e 
 **Mining:**
 
 ````
-pm2 start neurons/miner/miner.py --interpreter python3 --name miner<ID>-net17 -- --netuid 17 --wallet.name <coldkey> --wallet.hotkey <hotkey> --sense.base_url http://host:port --sense.api_key (your api key) --logging.debug
+pm2 start src/flavia/neurons/miner/miner.py --interpreter python3 --name miner<ID>-net17 -- --netuid 17 --wallet.name <coldkey> --wallet.hotkey <hotkey> --sense.base_url http://host:port --sense.api_key (your api key) --logging.debug
 
 pm2 start run_update_all.py --name auto_update_mining (for auto updater)
 ````
