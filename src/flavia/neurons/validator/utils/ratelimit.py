@@ -1,19 +1,19 @@
 import asyncio
+from tqdm.asyncio import tqdm
 
-from tqdm import tqdm
 async def run_tasks(tasks, rate_limit):
     results = []
     total_tasks = len(tasks)
-    semaphore = asyncio.Semaphore(rate_limit)  # Create a semaphore with the rate limit
 
-    async def task_runner(task, progress_bar):
-        async with semaphore:
-            result = await asyncio.ensure_future(task)
-            results.append(result)
-            progress_bar.update(1)  # Update the progress bar after each task completion
+    async def task_runner(task, pbar):
+        pbar.update(1)
+        result = await task
+        return result
 
-    with tqdm(total=total_tasks) as pbar:
-        task_futures = [task_runner(task, pbar) for task in tasks]
-        await asyncio.gather(*task_futures)
+    pbar = tqdm(total=total_tasks)
+    for task in tasks:
+        results.append(await task_runner(task, pbar))
+        await asyncio.sleep(rate_limit)
+    pbar.close()
 
     return results
