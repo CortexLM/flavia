@@ -3,6 +3,7 @@ import bittensor as bt
 import argparse
 from pathlib import Path
 from flavia import sense
+from src.flavia.neurons.validator.validations.text2image import Text2ImageValidator
 from src.flavia.neurons.validator.validations.completion import TextCompletionValidator
 from src.flavia.neurons.validator.utils.weights import Weights
 import asyncio 
@@ -41,7 +42,7 @@ class BittensorValidator:
     
     async def run(self):
         self.weights = Weights(
-        self.loop, self.dendrite, self.subtensor, self.config, self.wallet, self.dummy_validator)
+        self.loop, self.dendrite, self.subtensor, self.config, self.wallet, self.text_completion_validator, self.text2image_validator)
         await self.run_forever()
     def setup_validator(self, config):
         bt.logging.info(f"Running validator for subnet: {config.netuid} on network: {config.subtensor.chain_endpoint}")
@@ -67,7 +68,8 @@ class BittensorValidator:
             "wallet": self.wallet,
             "sense": self.sense
         }
-        self.dummy_validator = TextCompletionValidator(**validator_config)
+        self.text_completion_validator = TextCompletionValidator(**validator_config)
+        self.text2image_validator = Text2ImageValidator(**validator_config)
         bt.logging.info("Validators initialized successfully.")
 
 if __name__ == "__main__":

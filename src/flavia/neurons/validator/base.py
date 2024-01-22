@@ -17,9 +17,12 @@ class BaseValidator(ABC):
         self.async_lock = asyncio.Lock()
         self.threading_lock = threading.Lock()
 
-    async def query_miner(self, metagraph, uid, syn):
+    async def query_miner(self, metagraph, uid, syn, timeout=None):
         try:
-            responses = await self.dendrite([metagraph.axons[uid]], syn, deserialize=False, timeout=self.timeout,
+            current_timeout = self.timeout
+            if timeout != None:
+                current_timeout = timeout
+            responses = await self.dendrite([metagraph.axons[uid]], syn, deserialize=False, timeout=current_timeout,
                                             streaming=self.streaming)
             return await self.handle_response(uid, responses)
 
@@ -27,9 +30,9 @@ class BaseValidator(ABC):
             bt.logging.error(f"Exception during query for uid {uid}: {e}")
             return uid, None
     
-    @abstractmethod
     async def handle_response(self, uid, responses):
-        ...    
+        return uid, responses
+
     async def get_and_score(self, available_uids, metagraph):
         bt.logging.info("starting query")
         query_responses, uid_to_question, parameters = await self.start_query(available_uids, metagraph)

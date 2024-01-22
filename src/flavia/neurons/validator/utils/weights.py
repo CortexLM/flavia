@@ -23,14 +23,15 @@ class Weights:
                 )
         return asyncio.create_task(_log_exception(awaitable))
 
-    def __init__(self, loop: asyncio.AbstractEventLoop, dendrite, subtensor, config, wallet, dummy_validator):
+    def __init__(self, loop: asyncio.AbstractEventLoop, dendrite, subtensor, config, wallet, text_completion_validator, text2image_validator):
         self.loop = loop
         self.dendrite = dendrite
         self.subtensor = subtensor
         self.config = config
         self.wallet = wallet
-        self.dummy_validator = dummy_validator
-
+        self.text_completion_validator = text_completion_validator
+        self.text2image_validator = text2image_validator
+        self.actual_validator = text_completion_validator
         self.moving_average_scores = None
         self.metagraph = subtensor.metagraph(config.netuid)
         self.total_scores = torch.zeros(len(self.metagraph.hotkeys))
@@ -65,7 +66,11 @@ class Weights:
                 await asyncio.sleep(10)
     
     def select_validator(self):
-        return self.dummy_validator
+        if self.actual_validator == self.text_completion_validator:
+            self.actual_validator = self.text2image_validator
+        else:
+            self.actual_validator = self.text_completion_validator
+        return self.actual_validator
     
     async def get_available_uids(self):
         """Get a dictionary of available UIDs and their axons asynchronously."""

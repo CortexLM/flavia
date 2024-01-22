@@ -1,3 +1,4 @@
+from io import BytesIO
 import sys
 import copy
 import bittensor as bt
@@ -13,8 +14,31 @@ import time
 from starlette.types import Send
 from functools import partial
 from flavia.sense import SenseClient
-
+from torchvision import transforms
+import torch
+from PIL import Image
+import base64
 loop = asyncio.get_event_loop()
+
+transform_b64_bt = transforms.Compose([
+    transforms.Lambda(lambda x: base64.b64decode(x)),
+    transforms.Lambda(lambda x: Image.open(BytesIO(x))), 
+    transforms.ToTensor() 
+])
+def tensor_to_pil(tensor_image):
+    # Normalize tensor to 0-1 if it's not already
+    if torch.max(tensor_image) > 1:
+        tensor_image = tensor_image / 255
+
+    # Convert to PIL image
+    return Image.fromarray(tensor_image.mul(255).byte().numpy().transpose(1, 2, 0))
+
+# Convert PIL image to base64
+def pil_to_base64(pil_image):
+    img_byte_arr = BytesIO()
+    pil_image.save(img_byte_arr, format='PNG')
+    img_byte_arr = img_byte_arr.getvalue()
+    return base64.b64encode(img_byte_arr).decode()
 class Miner(ABC):
     def __init__(self, config=None, axon=None, wallet=None, subtensor=None):
         # Initialize logging
@@ -38,6 +62,7 @@ class Miner(ABC):
         # List of function pairs: each pair consists of a forward function and its corresponding blacklist function.
         axon_function_pairs = [
             (self._completion, self._filter_completion),
+            (self._text2image, self._filter_text2image)
         ]
 
         self.initialize_axon_connections(axon_function_pairs)
@@ -107,12 +132,17 @@ class Miner(ABC):
         except Exception:
             bt.logging.error(f"errror in blacklist {traceback.format_exc()}")
 
+    def _filter_text2image(self, synapse: TextToImage) -> Tuple[bool, str]:
+        blacklist = self.base_blacklist(synapse)
+        bt.logging.debug(blacklist[1])
+        return blacklist
+
     def _filter_completion(self, synapse: TextCompletion) -> Tuple[bool, str]:
         blacklist = self.base_blacklist(synapse)
         bt.logging.debug(blacklist[1])
         return blacklist
-    
-    def completion(self, synapse: TextCompletion) -> TextCompletion:
+        
+    async def completion(self, synapse: TextCompletion) -> TextCompletion:
         bt.logging.info(f"started processing for synapse {synapse}")
         
         
@@ -155,9 +185,19 @@ class Miner(ABC):
 
         token_streamer = partial(_prompt, synapse)
         return synapse.create_streaming_response(token_streamer)
-        
-    def _completion(self, synapse: TextCompletion) -> TextCompletion:
-        return self.completion(synapse)
+
+    async def text2image(self, synapse: TextToImage) -> TextToImage:
+        bt.logging.debug(synapse)
+        r_output = await self.sense.text2image(model=synapse.model, prompt=synapse.prompt, height=synapse.height, width=synapse.width, num_inference_steps=synapse.num_inference_steps, seed=synapse.seed, batch_size=synapse.batch_size, refiner=synapse.refiner)
+        tensor_images = [bt.Tensor.serialize( transform_b64_bt(base64_image) ) for base64_image in r_output['images']]
+
+        synapse.output = tensor_images
+        return synapse        
+
+    async def _text2image(self, synapse: TextToImage) -> TextToImage:
+        return await self.text2image(synapse)
+    async def _completion(self, synapse: TextCompletion) -> TextCompletion:
+        return await self.completion(synapse)
 
     def run_in_background_thread(self) -> None:
         if not self.is_running:
