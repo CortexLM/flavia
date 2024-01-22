@@ -30,8 +30,8 @@ class Text2ImageValidator(BaseValidator):
             random_steps = generate_random_step_with_bias()
             seed = random.randint(0, 2 ** 32 - 1)
             refiner = should_use_refiner()
-            base_timeout = 5
-            timeout_per_step = 1
+            base_timeout = 8
+            timeout_per_step = 1.5
             current_timeout = base_timeout + (random_steps // 10) * timeout_per_step
 
             parameters[uid] = {
