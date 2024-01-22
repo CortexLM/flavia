@@ -112,7 +112,7 @@ class Miner(ABC):
         bt.logging.debug(blacklist[1])
         return blacklist
     
-    async def completion(self, synapse: TextCompletion) -> TextCompletion:
+    def completion(self, synapse: TextCompletion) -> TextCompletion:
         bt.logging.info(f"started processing for synapse {synapse}")
         
         

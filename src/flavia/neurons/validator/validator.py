@@ -3,10 +3,9 @@ import bittensor as bt
 import argparse
 from pathlib import Path
 from flavia import sense
-from neurons.validator.validations.completion import TextCompletionValidator
+from src.flavia.neurons.validator.validations.completion import TextCompletionValidator
 from src.flavia.neurons.validator.utils.weights import Weights
 import asyncio 
-
 class BittensorValidator:
     def __init__(self):
         self.metagraph = None
@@ -15,6 +14,7 @@ class BittensorValidator:
         self.config = self.get_config()
         print(self.config)
         self.wallet, self.subtensor, self.dendrite, self.validator_uid = self.setup_validator(self.config)
+        self.sense = sense.SenseClient(base_url=self.config.sense.base_url, api_key=self.config.sense.api_key)
         self.setup_validation_components()
         self.loop = asyncio.get_event_loop()
 
@@ -64,7 +64,8 @@ class BittensorValidator:
             "dendrite": self.dendrite,
             "config": self.config,
             "subtensor": self.subtensor,
-            "wallet": self.wallet
+            "wallet": self.wallet,
+            "sense": self.sense
         }
         self.dummy_validator = TextCompletionValidator(**validator_config)
         bt.logging.info("Validators initialized successfully.")

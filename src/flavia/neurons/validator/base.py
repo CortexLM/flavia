@@ -26,13 +26,15 @@ class BaseValidator(ABC):
         except Exception as e:
             bt.logging.error(f"Exception during query for uid {uid}: {e}")
             return uid, None
+    
+    @abstractmethod
     async def handle_response(self, uid, responses):
-        return uid, responses      
+        ...    
     async def get_and_score(self, available_uids, metagraph):
         bt.logging.info("starting query")
-        query_responses, uid_to_question = await self.start_query(available_uids, metagraph)
+        query_responses, uid_to_question, parameters = await self.start_query(available_uids, metagraph)
         bt.logging.info("scoring query")
-        return await self.score_responses(query_responses, uid_to_question, metagraph)
+        return await self.score_responses(query_responses, uid_to_question, metagraph, parameters)
 
     @abstractmethod
     async def score_responses(self, responses):
