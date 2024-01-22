@@ -61,3 +61,9 @@ async def calculate_speed_image(width, height, num_inferences_step, duration):
     
     # Not working, to rebase
     return speed
+
+def calculate_image_timeout(steps):
+    base_timeout = 8
+    timeout_per_step = 1.5
+    current_timeout = base_timeout + (steps // 10) * timeout_per_step
+    return current_timeout

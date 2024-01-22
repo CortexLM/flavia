@@ -7,6 +7,7 @@ from src.flavia.neurons.validator.validations.text2image import Text2ImageValida
 from src.flavia.neurons.validator.validations.completion import TextCompletionValidator
 from src.flavia.neurons.validator.utils.weights import Weights
 import asyncio 
+bt.debug()
 class BittensorValidator:
     def __init__(self):
         self.metagraph = None

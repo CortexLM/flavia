@@ -6,6 +6,7 @@ import asyncio
 from abc import ABC, abstractmethod
 from config import check_config, get_config
 import argparse
+from src.flavia.neurons.validator.rewards.text2image import calculate_image_timeout
 from flavia.protocol import TextCompletion, TextToImage
 from typing import Tuple
 import traceback
@@ -19,7 +20,7 @@ import torch
 from PIL import Image
 import base64
 loop = asyncio.get_event_loop()
-
+bt.debug()
 transform_b64_bt = transforms.Compose([
     transforms.Lambda(lambda x: base64.b64decode(x)),
     transforms.Lambda(lambda x: Image.open(BytesIO(x))), 
@@ -145,7 +146,6 @@ class Miner(ABC):
     async def completion(self, synapse: TextCompletion) -> TextCompletion:
         bt.logging.info(f"started processing for synapse {synapse}")
         
-        
         async def _prompt(synapse, send: Send):
             try:
                 model = synapse.model
@@ -167,7 +167,7 @@ class Miner(ABC):
                                 "more_body": True,
                             }
                         )
-                        bt.logging.info(f"Streamed tokens: {joined_buffer}")
+                        bt.logging.debug(f"Streamed tokens: {joined_buffer}")
                         buffer = []
 
                 if buffer:
@@ -187,12 +187,19 @@ class Miner(ABC):
         return synapse.create_streaming_response(token_streamer)
 
     async def text2image(self, synapse: TextToImage) -> TextToImage:
+        start_time = time.time()  # Start timing
+
         bt.logging.debug(synapse)
+        bt.logging.debug(f"timeout for this image : {calculate_image_timeout(synapse.num_inference_steps)}")
         r_output = await self.sense.text2image(model=synapse.model, prompt=synapse.prompt, height=synapse.height, width=synapse.width, num_inference_steps=synapse.num_inference_steps, seed=synapse.seed, batch_size=synapse.batch_size, refiner=synapse.refiner)
-        tensor_images = [bt.Tensor.serialize( transform_b64_bt(base64_image) ) for base64_image in r_output['images']]
+        tensor_images = [bt.Tensor.serialize(transform_b64_bt(base64_image)) for base64_image in r_output['images']]
 
         synapse.output = tensor_images
-        return synapse        
+
+        elapsed_time = time.time() - start_time  # Calculate elapsed time
+        bt.logging.debug(f"Elapsed time for image generation : {elapsed_time:.2f} seconds")  # Print elapsed time
+
+        return synapse 
 
     async def _text2image(self, synapse: TextToImage) -> TextToImage:
         return await self.text2image(synapse)

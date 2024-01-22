@@ -1,4 +1,4 @@
-from src.flavia.neurons.validator.rewards.text2image import check_score_image
+from src.flavia.neurons.validator.rewards.text2image import calculate_image_timeout, check_score_image
 from src.flavia.neurons.validator.utils.text2image import generate_random_size_dimension, generate_random_step_with_bias, generate_unique_prompt, should_use_refiner
 from src.flavia.neurons.validator.rewards.completion import check_similarity_completion
 from src.flavia.neurons.validator.base import BaseValidator
@@ -32,7 +32,7 @@ class Text2ImageValidator(BaseValidator):
             refiner = should_use_refiner()
             base_timeout = 8
             timeout_per_step = 1.5
-            current_timeout = base_timeout + (random_steps // 10) * timeout_per_step
+            current_timeout = calculate_image_timeout(steps=random_steps)
 
             parameters[uid] = {
                 "model":self.model, "prompt":prompt, "seed":seed, 
