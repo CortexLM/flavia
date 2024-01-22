@@ -2,3 +2,5 @@ bittensor
 torch
 pillow
 scikit-image
+transformers
+loguru
