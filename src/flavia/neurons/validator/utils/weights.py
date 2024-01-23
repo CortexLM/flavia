@@ -145,32 +145,35 @@ class Weights:
 
     async def perform_synthetic_scoring_and_update_weights(self):
         while True:
-            for steps_passed in itertools.count():
-                def run_metagraph_sync():
-                    return self.subtensor.metagraph(
-                        self.config.netuid
-                    )
-                loop = asyncio.get_event_loop()
-                self.metagraph = await loop.run_in_executor(None, run_metagraph_sync)
-                available_uids = await self.get_available_uids()
-                selected_validator = self.select_validator()
-                scores, _ = await self.process_modality(selected_validator, available_uids)
-                if scores.size(0) > self.total_scores.size(0):
-                    size_diff = scores.size(0) - self.total_scores.size(0)
-                    self.total_scores = torch.cat([self.total_scores, torch.zeros(size_diff)], dim=0)
+            try:
+                for steps_passed in itertools.count():
+                    def run_metagraph_sync():
+                        return self.subtensor.metagraph(
+                            self.config.netuid
+                        )
+                    loop = asyncio.get_event_loop()
+                    self.metagraph = await loop.run_in_executor(None, run_metagraph_sync)
+                    available_uids = await self.get_available_uids()
+                    selected_validator = self.select_validator()
+                    scores, _ = await self.process_modality(selected_validator, available_uids)
+                    if scores.size(0) > self.total_scores.size(0):
+                        size_diff = scores.size(0) - self.total_scores.size(0)
+                        self.total_scores = torch.cat([self.total_scores, torch.zeros(size_diff)], dim=0)
 
-                self.total_scores += scores
+                    self.total_scores += scores
 
-                steps_since_last_update = steps_passed % iterations_per_set_weights
+                    steps_since_last_update = steps_passed % iterations_per_set_weights
 
-                if steps_since_last_update == iterations_per_set_weights - 1:
-                    await self.update_weights(steps_passed)
-                else:
-                    bt.logging.info(
-                        f"Updating weights in {iterations_per_set_weights - steps_since_last_update - 1} iterations."
-                    )
+                    if steps_since_last_update == iterations_per_set_weights - 1:
+                        await self.update_weights(steps_passed)
+                    else:
+                        bt.logging.info(
+                            f"Updating weights in {iterations_per_set_weights - steps_since_last_update - 1} iterations."
+                        )
 
-                await asyncio.sleep(10)
+                    await asyncio.sleep(10)
+            except Exception:
+                bt.logging.error("Error during validation, Sense works ?")
 
     def shuffled(self, list_: list) -> list:
         list_ = list_.copy()
