@@ -8,7 +8,7 @@ import random
 from typing import Awaitable
 
 from src.flavia.neurons.validator.utils.uids import check_uid_availability
-iterations_per_set_weights = 2
+iterations_per_set_weights = 1
 scoring_organic_timeout = 60
 
 class Weights:
