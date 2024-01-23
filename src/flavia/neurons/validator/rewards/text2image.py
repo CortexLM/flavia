@@ -33,9 +33,10 @@ def compare_images(tensor_image1, tensor_image2):
 
     # Check if similarity is greater than 99%
     return similarity
+    
 async def check_score_image(self, uid, model, image, prompt, steps, seed, height, width, refiner):
     bt.logging.debug(f'Scoring {uid} image..')
-    r_output = await self.daemon.send_text_to_image_request(model=model, prompt=prompt, height=height, width=width, num_inference_steps=steps, seed=seed, batch_size=1, refiner=refiner)
+    r_output = await self.sense.text2image(model=model, prompt=prompt, height=height, width=width, num_inference_steps=steps, seed=seed, batch_size=1, refiner=refiner)
     
     vali_image = transform_b64_bt(r_output['images'][0])
     similarity_score = compare_images(bt.Tensor.deserialize(image), vali_image)
@@ -60,3 +61,9 @@ async def calculate_speed_image(width, height, num_inferences_step, duration):
     
     # Not working, to rebase
     return speed
+
+def calculate_image_timeout(steps):
+    base_timeout = 8
+    timeout_per_step = 1.5
+    current_timeout = base_timeout + (steps // 10) * timeout_per_step
+    return current_timeout

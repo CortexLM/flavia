@@ -1,17 +1,37 @@
 import aiohttp
 import bittensor as bt
 import json
-class DaemonClient:
+
+def add_args(parser):
+    # Adds arguments related to Sense configuration to the parser
+
+    # Argument for Sense base URL
+    parser.add_argument(
+        "--sense.base_url",
+        type=str,
+        help="Base URL for Sense Daemon",
+        default="http://127.0.0.1:8000",
+    )
+
+    # Argument for Sense API key
+    parser.add_argument(
+        "--sense.api_key",
+        type=str,
+        help="API key for Sense Daemon.",
+        default=None,
+    )
+
+class SenseClient:
     def __init__(self, base_url='http://127.0.0.1:8000', api_key=None):
         if base_url.endswith('/'):
             # Si elle se termine par '/', supprimez-le en utilisant le slicing
             base_url = base_url[:-1]
-        bt.logging.debug(f"Use Sense Server {base_url}")
+        bt.logging.info(f"Use Sense Server {base_url}")
         self.base_url = base_url
         
         self.headers = {'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json',} if api_key else {}
 
-    async def send_text_to_image_request(self, model, prompt, height, width, num_inference_steps, seed, batch_size, refiner):
+    async def text2image(self, model, prompt, height, width, num_inference_steps, seed, batch_size, refiner):
         """
         Asynchronously sends a text-to-image request to the server.
 
@@ -42,7 +62,7 @@ class DaemonClient:
             async with session.post(url, json=payload, headers=self.headers) as response:
                 return await response.json()
 
-    async def send_image_to_image_request(self, image, model, prompt, height, width, strength, seed, batch_size):
+    async def image2image(self, image, model, prompt, height, width, strength, seed, batch_size):
         """
         Asynchronously sends an image-to-image request to the server.
 
@@ -73,7 +93,7 @@ class DaemonClient:
             async with session.post(url, json=payload, headers=self.headers) as response:
                 return await response.json()
 
-    async def send_text_generation_interactive(self, model, prompt, temperature, repetition_penalty, top_p, top_k, max_tokens):
+    async def interactive(self, model, prompt, temperature, repetition_penalty, top_p, top_k, max_tokens):
         url = f"{self.base_url}/text_generation/{model}/chat/interactive"
         payload = {
             "prompt": prompt,
@@ -99,7 +119,7 @@ class DaemonClient:
                             pass
 
 
-    async def send_text_generation_completions(self, model, messages, temperature, repetition_penalty, top_p, max_tokens):
+    async def completion(self, model, messages, temperature, repetition_penalty, top_p, max_tokens):
         url = f"{self.base_url}/text_generation/{model}/chat/completions"
         payload = {
             "messages": messages,

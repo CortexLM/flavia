@@ -1,11 +1,11 @@
 import argparse
 import time
-from flavia.utils.autoupdater import AutoUpdater
+from flavia.autoupdater import AutoUpdater
 from subprocess import Popen, PIPE, run
 import sys
 import subprocess
 
-class SenseProcessManager:
+class FlaviaProcessUpdateManager:
     def __init__(self):
         pass
 
@@ -27,5 +27,5 @@ class SenseProcessManager:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Automatic Update Script with AutoUpdater and PM2.")
-    updater_manager = SenseProcessManager()
+    updater_manager = FlaviaProcessUpdateManager()
     updater_manager.check_for_updates()

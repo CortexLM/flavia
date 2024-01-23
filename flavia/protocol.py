@@ -61,7 +61,7 @@ class TextInteractive(bt.StreamingSynapse):
                         self.completion += token
                 yield tokens
         except Exception as e:
-            bt.logging.error(f"Error processing streaming response: {str(e)}")
+            pass
 
     def deserialize(self) -> str:
         """
@@ -132,7 +132,7 @@ class TextCompletion(bt.StreamingSynapse):
                         self.completion += token
                 yield tokens
         except Exception as e:
-            bt.logging.error(f"Error processing streaming response: {str(e)}")
+            pass
 
     def deserialize(self) -> str:
         """
@@ -199,7 +199,7 @@ class ImageToImage(bt.Synapse):
         # Implementation of the deserialize method
         pass  # Customize based on your requirements
 
-class isOnline(bt.Synapse):
+class isAlive(bt.Synapse):
     active: str = False
 
     def deserialize(self):

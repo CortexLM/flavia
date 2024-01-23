@@ -1,10 +1,6 @@
-pillow
 bittensor
 torch
-torchvision
-transformers
-datasets
+pillow
 scikit-image
-tiktoken
+transformers
 loguru
-aiohttp

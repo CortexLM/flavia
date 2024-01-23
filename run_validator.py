@@ -1,11 +1,11 @@
 import argparse
 import time
-from flavia.utils.autoupdater import AutoUpdater
+from flavia.autoupdater import AutoUpdater
 from subprocess import Popen, PIPE, run
 import sys
 import subprocess
 
-class SenseProcessManager:
+class FlaviaProcessManager:
     def __init__(self):
         pass
 
@@ -30,7 +30,7 @@ class SenseProcessManager:
             else:
                 # Otherwise, add the argument to the list of arguments
                 arguments.append(arg)
-        pm2_command = f"pm2 -f start --interpreter python3 neurons/validator.py --name {process_name}"
+        pm2_command = f"pm2 -f start --interpreter python3 src/flavia/neurons/validator/validator.py --name {process_name}"
         if arguments:
             pm2_command += f" -- {' '.join(arguments)}"
         run(pm2_command, shell=True, check=True)
@@ -55,6 +55,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Automatic Update Script with AutoUpdater and PM2.")
     parser.add_argument("--process_name", required=True, help="Name of the PM2 process to start.")
     args, unknown = parser.parse_known_args()
-    updater_manager = SenseProcessManager()
+    updater_manager = FlaviaProcessManager()
     updater_manager.update_and_start(args.process_name)
     updater_manager.check_for_updates(args.process_name)
