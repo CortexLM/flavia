@@ -4,10 +4,11 @@ import sys
 import os
 from loguru import logger
 
+path = os.path.dirname(os.path.realpath(__file__))
 class AutoUpdater:
     def __init__(self):
-        self.version_url = "https://raw.githubusercontent.com/CortexLM/flavia/master/VERSION"
-        self.local_version_file = "VERSION"
+        self.version_url = "https://raw.githubusercontent.com/CortexLM/flavia/main/VERSION"
+        self.local_version_file = f"{path}/../VERSION"
         self.local_version = None
         logger.success('Auto updater initialized')
         self.check_update()
@@ -22,13 +23,14 @@ class AutoUpdater:
         # Get the remote version from GitHub
         response = requests.get(self.version_url)
         remote_version = response.text.strip()
+        environment = os.environ.copy()
         with open(self.local_version_file, "r") as f:
             self.local_version = f.read().strip()
         if self.local_version != remote_version:
             # Versions are different, perform git pull
-            subprocess.run(["git", "pull", "--force"], check=True)
-            subprocess.run(["pip3", "install", "-r", "requirements.txt"], check=True)
-            subprocess.run(["pip3", "install", "-e", "."], check=True)
+            subprocess.run(["git", "pull", "--force"], check=True, env=environment)
+            subprocess.run(["pip3", "install", "-r", "requirements.txt"], check=True, env=environment)
+            subprocess.run(["pip3", "install", "-e", "."], check=True, env=environment)
             logger.info(f"old version {self.local_version} | Repo version {remote_version} | Now {remote_version} -> Updated.")
             return True
         else:

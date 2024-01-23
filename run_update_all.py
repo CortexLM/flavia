@@ -11,15 +11,16 @@ class FlaviaProcessUpdateManager:
 
     @staticmethod
     def check_for_updates(interval=60):
+        environment = os.environ.copy()
         updater = AutoUpdater()
         while True:
             time.sleep(interval)
             if updater.check_update():
                 pm2_command_stop = f"pm2 stop all"
-                process = Popen(pm2_command_stop, shell=True, stdout=PIPE, stderr=PIPE)
+                process = Popen(pm2_command_stop, shell=True, stdout=PIPE, stderr=PIPE, env=environment)
                 process.communicate()
                 pm2_command_start = f"pm2 start all"
-                process = Popen(pm2_command_start, shell=True, stdout=PIPE, stderr=PIPE)
+                process = Popen(pm2_command_start, shell=True, stdout=PIPE, stderr=PIPE, env=environment)
                 process.communicate()
 
                 print("PM2 process successfully restarted.")
