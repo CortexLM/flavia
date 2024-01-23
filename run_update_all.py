@@ -4,7 +4,7 @@ from flavia.autoupdater import AutoUpdater
 from subprocess import Popen, PIPE, run
 import sys
 import subprocess
-
+import os
 class FlaviaProcessUpdateManager:
     def __init__(self):
         pass
