@@ -14,7 +14,7 @@ class TextCompletionValidator(BaseValidator):
         super().__init__(dendrite, config, subtensor, wallet, timeout=10, streaming=True)
         self.sense = sense
         self.query_type = "text"
-        self.model = "CortexLM|platyi-34b-llama-q-w4"
+        self.model = "TheBloke|bagel-dpo-34b-v0.2-AWQ"
         self.instructions_dataset = load_dataset("cognitivecomputations/dolphin", "flan1m-alpaca-uncensored", trust_remote_code=True)
 
     async def handle_response(self, uid: str, responses) -> tuple[str, str]:
