@@ -8,3 +8,4 @@ scikit-image
 tiktoken
 loguru
 aiohttp
+protobuf
