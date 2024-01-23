@@ -26,11 +26,7 @@ class SenseClient:
         if base_url.endswith('/'):
             # Si elle se termine par '/', supprimez-le en utilisant le slicing
             base_url = base_url[:-1]
-<<<<<<< HEAD:flavia/sense.py
         bt.logging.info(f"Use Sense Server {base_url}")
-=======
-        bt.logging.debug(f"Use Sense Server {base_url}")
->>>>>>> origin/main:flavia/utils/daemon.py
         self.base_url = base_url
         
         self.headers = {'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json',} if api_key else {}

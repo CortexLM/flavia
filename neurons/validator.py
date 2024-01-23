@@ -12,3 +12,9 @@ def run_script(args):
     # Execute the script
     subprocess.run(command)
 
+if __name__ == "__main__":
+    # Get arguments passed to this script (excluding the script name itself)
+    args = sys.argv[1:]
+
+    # Run the script with the arguments
+    run_script(args)

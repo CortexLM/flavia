@@ -61,11 +61,7 @@ class TextInteractive(bt.StreamingSynapse):
                         self.completion += token
                 yield tokens
         except Exception as e:
-<<<<<<< HEAD
             pass
-=======
-            bt.logging.error(f"Error processing streaming response: {str(e)}")
->>>>>>> origin/main
 
     def deserialize(self) -> str:
         """
@@ -136,11 +132,7 @@ class TextCompletion(bt.StreamingSynapse):
                         self.completion += token
                 yield tokens
         except Exception as e:
-<<<<<<< HEAD
             pass
-=======
-            bt.logging.error(f"Error processing streaming response: {str(e)}")
->>>>>>> origin/main
 
     def deserialize(self) -> str:
         """
