@@ -10,48 +10,39 @@ Execute large-scale models on the Bittensor network
 [Discord](https://discord.gg/bittensor) • [Network](https://taostats.io/) • [Research](https://bittensor.com/whitepaper)
 </div>
 
-#
-> [!WARNING]  
-> This is an beta version. Please report any bugs or suggest any improvements.
 
-### 📋 Introduction
+</div>
+
+#
+### About Flavia
+
 The Flavia project is a sub-network of the Bittensor network, focused on decentralized model inference at different scales. It represents a groundbreaking innovation in the field of distributed computing, bringing a new level of efficiency and scalability to model inference tasks. This project is not just a technical achievement; it's a visionary step towards a more interconnected and collaborative digital ecosystem.
 
 Within the Flavia subnet, each node contributes to the overall inference process, making it a highly resilient and robust system. This decentralized approach ensures that the network is not reliant on any single point of failure, thereby significantly enhancing its reliability and uptime. Moreover, the Flavia project is designed to be adaptive, capable of handling various types of computational loads, from small-scale individual requests to large, complex queries that require more substantial computational resources.
 
 One of the most striking aspects of the Flavia project is its commitment to democratizing access to advanced model inference capabilities. By distributing the computational load across a network of nodes, Flavia allows individuals and organizations with limited resources to benefit from high-quality model inference without the need for significant hardware investments. This aspect is particularly crucial in an era where data-driven decision-making is becoming increasingly prevalent across various sectors.
-## 🔧 Setup
 
-**NOTICE :** The execution of Flavia requires the installation of Sense for model inference, which is mandatory for miners and validators. Sense must be on a different server; to install it, <a href="https://github.com/CortexLM/sense">click here</a>.
-> [!WARNING]  
-> We strongly recommend the utilization of Python environments for mining/validating activities. This approach is crucial because code originating from various subnets can often experience packet conflicts when interacting with each other. By using isolated Python environments, developers can ensure that each subnet operates within its own dedicated space.
+**NOTICE:** By utilizing this software, you are required to consent to the Terms and Agreements outlined in the [terms and conditions document](https://example.com). Implicit agreement to these terms and conditions is assumed upon downloading and executing this software.
 
-> [!NOTE]  
-> We recommend the use of a local Subtensor.
-### Installation
-**Clone the Repository & install the necessary requirements**
+- [Example](https://example.com).
+  
+# Documentation
+1. [Sense Overview](#overview)
 
-````
-git clone https://github.com/CortexLM/flavia.git && cd flavia && pip install -e .
-````
+## Contributing
+
+Thank you for considering contributing to the Sense daemon! The contribution guide can be found in the [Laravel documentation]((https://github.com/CortexLM/sense)/docs/contributions).
+
+## Code of Conduct
+
+In order to ensure that the Sense/Flavia community is welcoming to all, please review and abide by the [Code of Conduct](https://github.com/CortexLM/sense/docs/contributions#code-of-conduct).
+
+## Security Vulnerabilities
+
+If you discover a security vulnerability within Sense, please send an e-mail to the development team via [dev@cortex.foundation](mailto:dev@cortex.foundation). All security vulnerabilities will be promptly addressed.
 
 
-
-**Mining:**
-
-````
-pm2 start src/flavia/neurons/miner/miner.py --interpreter python3 --name miner<ID>-net17 -- --netuid 17 --wallet.name <coldkey> --wallet.hotkey <hotkey> --sense.base_url http://host:port --sense.api_key (your api key) --logging.debug
-
-pm2 start run_update_all.py --name auto_update_mining (for auto updater)
-````
-
-**Validator:**
-
-````
-pm2 start run_validator.py --name validator-net17 --interpreter python3 -- --process_name validator-net17 --netuid 17 --wallet.name <coldkey> --wallet.hotkey <hotkey> --sense.base_url http://<HOST>:<EXTERNAL_PORT> --sense.api_key <YOUR API KEY> --logging.debug
-````
-
-## ⚖️ Support our Subnet: Assigning weights
+# Support our Subnet: Assigning weights
 As a validator in the Bittensor network, your support is crucial for the success and efficiency of subnets like Flavia. We invite you to consider assigning weights to our subnet, which will significantly contribute to its performance and the overall robustness of the network.
 
 To allocate weights to the Flavia subnet, you can use the ```btcli root weights``` (**SN17**) command.
@@ -60,11 +51,9 @@ By assigning weights to our subnet, you play a vital role in enhancing its infer
 
 We appreciate your contribution and thank you for your support in advancing decentralized AI with Flavia.
 
+## License
 
-
-
-## 📜 License
-This repository is licensed under the MIT License.
+Flavia  is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
 ```text
 # The MIT License (MIT)
 # Copyright © 2023 Yuma Rao
